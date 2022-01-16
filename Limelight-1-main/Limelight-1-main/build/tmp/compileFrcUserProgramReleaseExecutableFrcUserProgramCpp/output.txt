@@ -1,0 +1,4 @@
+See file:///Users/mahdi/Desktop/FRC/2022/Limelight%20v1/build/tmp/compileFrcUserProgramReleaseExecutableFrcUserProgramCpp/output.txt for all output for compileFrcUserProgramReleaseExecutableFrcUserProgramCpp.
+compiling Robot.cpp successful.
+
+Finished compileFrcUserProgramReleaseExecutableFrcUserProgramCpp, see full log file:///Users/mahdi/Desktop/FRC/2022/Limelight%20v1/build/tmp/compileFrcUserProgramReleaseExecutableFrcUserProgramCpp/output.txt.

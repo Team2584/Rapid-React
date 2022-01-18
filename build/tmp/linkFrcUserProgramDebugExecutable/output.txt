@@ -1,0 +1,4 @@
+See file:///Users/mahdi/Desktop/FRC/2022/Limelight%20v1/build/tmp/linkFrcUserProgramDebugExecutable/output.txt for all output for linkFrcUserProgramDebugExecutable.
+linking frcUserProgram successful.
+
+Finished linkFrcUserProgramDebugExecutable, see full log file:///Users/mahdi/Desktop/FRC/2022/Limelight%20v1/build/tmp/linkFrcUserProgramDebugExecutable/output.txt.

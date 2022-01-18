@@ -75,19 +75,26 @@ void Robot::TeleopInit() {}
 
 void Robot::TeleopPeriodic() {
 
-  float Kp = -0.02;
+  float KpX = -0.02;
+  float KpY = -0.02;
+
 
   std::shared_ptr<NetworkTable> table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");
-  double tx = table->GetNumber("tx", 0.0);  
+  double tx = table->GetNumber("tx", 0.0);
+  double ty = table->GetNumber("ty", 0.0);  
 
   if (m_stick->GetRawButton(2)){
 
     float heading_error = tx;
-    float steering_adjust = Kp * tx;
+    float steering_adjust = KpX * tx;
+    float driving_adjust = KpY * ty;
+
+    // if -ty then go forward
+    // if + ty go backwards
 
     //float rotations = (steering_adjust/(6*pi))*8.68;
 
-    drive.TankDrive(-steering_adjust, steering_adjust);
+    drive.TankDrive(-steering_adjust + driving_adjust, steering_adjust + driving_adjust);
     //drive.ArcadeDrive(0, -steering_adjust);
 
     // m_leftfront.Set(-steering_adjust);

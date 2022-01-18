@@ -94,7 +94,19 @@ void Robot::TeleopPeriodic() {
 
     //float rotations = (steering_adjust/(6*pi))*8.68;
 
-    drive.TankDrive(-steering_adjust + driving_adjust, steering_adjust + driving_adjust);
+    while (tx > 10 || tx < -10){
+      drive.TankDrive(-steering_adjust, steering_adjust);
+      
+    }
+    while (tx < 10 && tx > -10){
+      drive.TankDrive(driving_adjust, driving_adjust);
+    }
+
+
+    //drive.TankDrive(-steering_adjust, steering_adjust);
+
+
+
     //drive.ArcadeDrive(0, -steering_adjust);
 
     // m_leftfront.Set(-steering_adjust);

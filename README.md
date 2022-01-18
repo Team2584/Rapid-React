@@ -1,2 +1,2 @@
 # Rapid-React
-The repository for the Rapid React robot code
+The repository for the Rapid React robot code.

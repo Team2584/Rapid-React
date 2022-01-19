@@ -21,9 +21,6 @@ using namespace frc;
   double ts = table->GetNumber("ts",0.0);                   //Get skew of target
   double tv = table->GetNumber("tv", 0.0);
 
-  rev::CANEncoder m_encoderR = m_rightfront.GetEncoder();
-  rev::CANEncoder m_encoderL = m_leftfront.GetEncoder();
-
   frc::Joystick *m_stick;
 
   frc::DifferentialDrive drive{m_leftfront, m_rightfront};
@@ -37,9 +34,6 @@ void Robot::RobotInit() {
 
   m_leftback.Follow(m_leftfront);
   m_rightback.Follow(m_rightfront);
-
-  m_encoderR.SetPosition(0.0);
-  m_encoderL.SetPosition(0.0);
 
   //drives 18.85 inches per rotation; 8.68 motor revs * 42
   //365 rotations for 18.85 inches

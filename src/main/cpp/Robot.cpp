@@ -14,7 +14,14 @@ using namespace frc;
   rev::CANSparkMax m_rightfront{rightleadmotorID, rev::CANSparkMax::MotorType::kBrushless};
   rev::CANSparkMax m_rightback{rightfollowermotorID, rev::CANSparkMax::MotorType::kBrushless};
 
-  std::shared_ptr<NetworkTable> table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");
+   //THIS IS A PROBLEM #Fix this and the code should work as intended { 
+  //std::shared_ptr<NetworkTable> table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");
+    //2021 Network Table
+  auto inst = nt::NetworkTableInstance::GetDefault();
+  auto table = inst.GetTable("limelight");
+    //2022 Network Table //needs fix
+  //  }
+
   double tx = table->GetNumber("tx",0.0);                   //Get horizontal off set from target
   double ty = table->GetNumber("ty",0.0);                   //Get vertical offset from target
   double ta = table->GetNumber("ta",0.0);                   //Get area of target on screen
@@ -26,9 +33,7 @@ using namespace frc;
   frc::DifferentialDrive drive{m_leftfront, m_rightfront};
 
 void Robot::RobotInit() {
-  m_chooser.SetDefaultOption(kAutoNameDefault, kAutoNameDefault);
-  m_chooser.AddOption(kAutoNameCustom, kAutoNameCustom);
-  frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
+  //frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
 
   m_stick = new Joystick(0);
 
@@ -37,43 +42,43 @@ void Robot::RobotInit() {
 
   //drives 18.85 inches per rotation; 8.68 motor revs * 42
   //365 rotations for 18.85 inches
-
 }
 
-void Robot::RobotPeriodic() {}
+void Robot::RobotPeriodic() {
+  frc2::CommandScheduler::GetInstance().Run();
+}
+
+void Robot::DisabledInit() {}
+
+void Robot::DisabledPeriodic() {}
 
 void Robot::AutonomousInit() {
-  /*
-  m_autoSelected = m_chooser.GetSelected();
-  // m_autoSelected = SmartDashboard::GetString("Auto Selector",
-  //     kAutoNameDefault);
-  // fmt::print("Auto selected: {}\n", m_autoSelected);
+  m_autonomousCommand = m_container.GetAutonomousCommand();
 
-  if (m_autoSelected == kAutoNameCustom) {
-    // Custom Auto goes here
-  } else {
-    // Default Auto goes here
-  }
-  */
-}
-
-void Robot::AutonomousPeriodic() {
-  if (m_autoSelected == kAutoNameCustom) {
-    // Custom Auto goes here
-  } else {
-    // Default Auto goes here
+  if (m_autonomousCommand != nullptr) {
+    m_autonomousCommand->Schedule();
   }
 }
 
-void Robot::TeleopInit() {}
+void Robot::AutonomousPeriodic() {}
 
-void Robot::TeleopPeriodic() {
+void Robot::TeleopInit() {
+  // if (m_autonomousCommand != nullptr) {
+  //   m_autonomousCommand->Cancel();
+  //   m_autonomousCommand = nullptr;
+  // }
 
   float KpX = -0.02;
   float KpY = -0.02;
 
+  //THIS IS A PROBLEM #Fix this and the code should work as intended { 
+  //std::shared_ptr<NetworkTable> table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");
+    //2021 Network Table
+  auto inst = nt::NetworkTableInstance::GetDefault();
+  auto table = inst.GetTable("limelight");
+    //2022 Network Table //needs fix
+  //  }
 
-  std::shared_ptr<NetworkTable> table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");
   double tx = table->GetNumber("tx", 0.0);
   double ty = table->GetNumber("ty", 0.0);  
 
@@ -112,11 +117,7 @@ void Robot::TeleopPeriodic() {
   }
 }
 
-void Robot::DisabledInit() {}
-
-void Robot::DisabledPeriodic() {}
-
-void Robot::TestInit() {}
+void Robot::TeleopPeriodic() {}
 
 void Robot::TestPeriodic() {}
 

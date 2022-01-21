@@ -88,11 +88,10 @@ void Robot::TeleopPeriodic() {
 
     //float rotations = (steering_adjust/(6*pi))*8.68;
 
-    while (tx > 10 || tx < -10){
+    while (tx > 5 || tx < -5){
       drive.TankDrive(-steering_adjust, steering_adjust);
-      
     }
-    while (tx < 10 && tx > -10){
+    while (tx < 5 && tx > -5){
       drive.TankDrive(driving_adjust, driving_adjust);
     }
 

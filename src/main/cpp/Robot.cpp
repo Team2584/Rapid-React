@@ -22,11 +22,23 @@ using namespace frc;
     //2022 Network Table //needs fix
   //  }
 
-  double tx = table->GetNumber("tx",0.0);                   //Get horizontal off set from target
-  double ty = table->GetNumber("ty",0.0);                   //Get vertical offset from target
-  double ta = table->GetNumber("ta",0.0);                   //Get area of target on screen
-  double ts = table->GetNumber("ts",0.0);                   //Get skew of target
-  double tv = table->GetNumber("tv", 0.0);
+//   double tx = table->GetNumber("tx",0.0);                   //Get horizontal off set from target
+//   double ty = table->GetNumber("ty",0.0);                   //Get vertical offset from target
+//   double ta = table->GetNumber("ta",0.0);                   //Get area of target on screen
+//   double ts = table->GetNumber("ts",0.0);                   //Get skew of target
+//   double tv = table->GetNumber("tv", 0.0);
+
+  nt::NetworkTableEntry tx;
+  nt::NetworkTableEntry ty;
+  nt::NetworkTableEntry ta;
+  nt::NetworkTableEntry ts;
+  nt::NetworkTableEntry tv;
+
+  tx = table->GetEntry("tx");
+  ty = table->GetEntry("ty");
+  ta = table->GetEntry("ta");
+  ts = table->GetEntry("ts");
+  tv = table->GetEntry("tv");
 
   frc::Joystick *m_stick;
 
@@ -79,8 +91,13 @@ void Robot::TeleopInit() {
     //2022 Network Table //needs fix
   //  }
 
-  double tx = table->GetNumber("tx", 0.0);
-  double ty = table->GetNumber("ty", 0.0);  
+//   double tx = table->GetNumber("tx", 0.0);
+//   double ty = table->GetNumber("ty", 0.0);  
+  nt::NetworkTableEntry tx;
+  nt::NetworkTableEntry ty;
+  
+  tx = table->GetEntry("tx");
+  ty = table->GetEntry("ty");  
 
   if (m_stick->GetRawButton(2)){
 
@@ -93,10 +110,10 @@ void Robot::TeleopInit() {
 
     //float rotations = (steering_adjust/(6*pi))*8.68;
 
-    while (tx > 5 || tx < -5){
+    while (tx > 7.5 || tx < -7.5){
       drive.TankDrive(-steering_adjust, steering_adjust);
     }
-    while (tx < 5 && tx > -5){
+    while (tx < 7.5 && tx > -7.5){
       drive.TankDrive(driving_adjust, driving_adjust);
     }
 

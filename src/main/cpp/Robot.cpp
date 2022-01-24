@@ -81,7 +81,7 @@ void Robot::TeleopInit() {
   // }
 
   float KpX = -0.02;
-  float KpY = -0.02;
+  float KpY = -0.01;
 
   //THIS IS A PROBLEM #Fix this and the code should work as intended { 
   //std::shared_ptr<NetworkTable> table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");

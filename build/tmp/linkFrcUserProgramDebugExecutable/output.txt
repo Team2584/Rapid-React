@@ -1,0 +1,4 @@
+See file:///Users/charliechen/Documents/2022%20FRC%20code/Auton/build/tmp/linkFrcUserProgramDebugExecutable/output.txt for all output for linkFrcUserProgramDebugExecutable.
+linking frcUserProgram successful.
+
+Finished linkFrcUserProgramDebugExecutable, see full log file:///Users/charliechen/Documents/2022%20FRC%20code/Auton/build/tmp/linkFrcUserProgramDebugExecutable/output.txt.

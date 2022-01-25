@@ -1,0 +1,13 @@
+See file:///Users/charliechen/Documents/2022%20FRC%20code/Auton/build/tmp/compileFrcUserProgramDebugExecutableFrcUserProgramCpp/output.txt for all output for compileFrcUserProgramDebugExecutableFrcUserProgramCpp.
+compiling Robot.cpp successful.
+/Users/charliechen/Documents/2022 FRC code/Auton/src/main/cpp/Robot.cpp: In function 'void MoveFwd(int)':
+/Users/charliechen/Documents/2022 FRC code/Auton/src/main/cpp/Robot.cpp:86:70: warning: 'virtual rev::REVLibError rev::SparkMaxPIDController::SetReference(double, rev::ControlType, int, double, rev::CANPIDController::ArbFFUnits)' is deprecated: Use SetReference(double, CANSparkMax::ControlType, int, double, SparkMaxPIDController::ArbFFUnits) instead [-Wdeprecated-declarations]
+   m_pidController.SetReference(rotations, rev::ControlType::kPosition);
+                                                                      ^
+In file included from /Users/charliechen/.gradle/caches/transforms-3/7c6cacd0ebedfbf573feab38f31e5ee9/transformed/REVLib-cpp-2022.1.1-headers/rev/CANSparkMax.h:58:0,
+                 from /Users/charliechen/Documents/2022 FRC code/Auton/src/main/cpp/Robot.cpp:6:
+/Users/charliechen/.gradle/caches/transforms-3/7c6cacd0ebedfbf573feab38f31e5ee9/transformed/REVLib-cpp-2022.1.1-headers/rev/SparkMaxPIDController.h:127:17: note: declared here
+     REVLibError SetReference(
+                 ^~~~~~~~~~~~
+
+Finished compileFrcUserProgramDebugExecutableFrcUserProgramCpp, see full log file:///Users/charliechen/Documents/2022%20FRC%20code/Auton/build/tmp/compileFrcUserProgramDebugExecutableFrcUserProgramCpp/output.txt.

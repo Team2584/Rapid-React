@@ -73,21 +73,21 @@ void Robot::AutonomousPeriodic() {
 void Robot::TeleopInit() {}
 
 void Robot::TeleopPeriodic() {
-   float KpX = -0.02;
-  float KpY = -0.01;
-
-  //THIS IS A PROBLEM #Fix this and the code should work as intended { 
-  //std::shared_ptr<NetworkTable> table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");
-    //2021 Network Table
-  auto inst = nt::NetworkTableInstance::GetDefault();
-  auto table = inst.GetTable("limelight");
-    //2022 Network Table //needs fix
-  //  }
-
-  double tx = table->GetNumber("tx", 0.0);
-  double ty = table->GetNumber("ty", 0.0);   
-
   if (m_stick->GetRawButton(2)){
+
+    float KpX = -0.02;
+    float KpY = -0.01;
+
+    //THIS IS A PROBLEM #Fix this and the code should work as intended { 
+    //std::shared_ptr<NetworkTable> table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");
+      //2021 Network Table
+    auto table = nt::NetworkTableInstance::GetDefault().GetTable("limelight");
+      //2022 Network Table //needs fix
+    //  }
+
+    double tx = table->GetNumber("tx", 0.0);
+    double ty = table->GetNumber("ty", 0.0);   
+
 
     float heading_error = tx;
     float steering_adjust = KpX * tx;
@@ -98,12 +98,12 @@ void Robot::TeleopPeriodic() {
 
     //float rotations = (steering_adjust/(6*pi))*8.68;
 
-    while (tx > 7.5 || tx < -7.5){
+    // while (tx > 1.5 || tx < -1.5){
       drive.TankDrive(-steering_adjust, steering_adjust);
-    }
-    while (tx < 7.5 && tx > -7.5){
-      drive.TankDrive(driving_adjust, driving_adjust);
-    }
+    // }
+    // while (tx < 1.5 && tx > -1.5){
+    //   drive.TankDrive(driving_adjust, driving_adjust);
+    // }
 
 
     //drive.TankDrive(-steering_adjust, steering_adjust);

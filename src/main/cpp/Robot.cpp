@@ -22,30 +22,21 @@ using namespace frc;
     //2022 Network Table //needs fix
   //  }
 
-//   double tx = table->GetNumber("tx",0.0);                   //Get horizontal off set from target
-//   double ty = table->GetNumber("ty",0.0);                   //Get vertical offset from target
-//   double ta = table->GetNumber("ta",0.0);                   //Get area of target on screen
-//   double ts = table->GetNumber("ts",0.0);                   //Get skew of target
-//   double tv = table->GetNumber("tv", 0.0);
-
-  nt::NetworkTableEntry tx;
-  nt::NetworkTableEntry ty;
-  nt::NetworkTableEntry ta;
-  nt::NetworkTableEntry ts;
-  nt::NetworkTableEntry tv;
-
-  tx = table->GetEntry("tx");
-  ty = table->GetEntry("ty");
-  ta = table->GetEntry("ta");
-  ts = table->GetEntry("ts");
-  tv = table->GetEntry("tv");
+  double tx = table->GetNumber("tx",0.0);                   //Get horizontal off set from target
+  double ty = table->GetNumber("ty",0.0);                   //Get vertical offset from target
+  double ta = table->GetNumber("ta",0.0);                   //Get area of target on screen
+  double ts = table->GetNumber("ts",0.0);                   //Get skew of target
+  double tv = table->GetNumber("tv", 0.0);
 
   frc::Joystick *m_stick;
 
   frc::DifferentialDrive drive{m_leftfront, m_rightfront};
 
+
 void Robot::RobotInit() {
-  //frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
+  m_chooser.SetDefaultOption(kAutoNameDefault, kAutoNameDefault);
+  m_chooser.AddOption(kAutoNameCustom, kAutoNameCustom);
+  frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
 
   m_stick = new Joystick(0);
 
@@ -56,31 +47,33 @@ void Robot::RobotInit() {
   //365 rotations for 18.85 inches
 }
 
-void Robot::RobotPeriodic() {
-  frc2::CommandScheduler::GetInstance().Run();
-}
-
-void Robot::DisabledInit() {}
-
-void Robot::DisabledPeriodic() {}
+void Robot::RobotPeriodic() {}
 
 void Robot::AutonomousInit() {
-  m_autonomousCommand = m_container.GetAutonomousCommand();
+  m_autoSelected = m_chooser.GetSelected();
+  // m_autoSelected = SmartDashboard::GetString("Auto Selector",
+  //     kAutoNameDefault);
+  fmt::print("Auto selected: {}\n", m_autoSelected);
 
-  if (m_autonomousCommand != nullptr) {
-    m_autonomousCommand->Schedule();
+  if (m_autoSelected == kAutoNameCustom) {
+    // Custom Auto goes here
+  } else {
+    // Default Auto goes here
   }
 }
 
-void Robot::AutonomousPeriodic() {}
+void Robot::AutonomousPeriodic() {
+  if (m_autoSelected == kAutoNameCustom) {
+    // Custom Auto goes here
+  } else {
+    // Default Auto goes here
+  }
+}
 
-void Robot::TeleopInit() {
-  // if (m_autonomousCommand != nullptr) {
-  //   m_autonomousCommand->Cancel();
-  //   m_autonomousCommand = nullptr;
-  // }
+void Robot::TeleopInit() {}
 
-  float KpX = -0.02;
+void Robot::TeleopPeriodic() {
+   float KpX = -0.02;
   float KpY = -0.01;
 
   //THIS IS A PROBLEM #Fix this and the code should work as intended { 
@@ -91,13 +84,8 @@ void Robot::TeleopInit() {
     //2022 Network Table //needs fix
   //  }
 
-//   double tx = table->GetNumber("tx", 0.0);
-//   double ty = table->GetNumber("ty", 0.0);  
-  nt::NetworkTableEntry tx;
-  nt::NetworkTableEntry ty;
-  
-  tx = table->GetEntry("tx");
-  ty = table->GetEntry("ty");  
+  double tx = table->GetNumber("tx", 0.0);
+  double ty = table->GetNumber("ty", 0.0);   
 
   if (m_stick->GetRawButton(2)){
 
@@ -134,7 +122,11 @@ void Robot::TeleopInit() {
   }
 }
 
-void Robot::TeleopPeriodic() {}
+void Robot::DisabledInit() {}
+
+void Robot::DisabledPeriodic() {}
+
+void Robot::TestInit() {}
 
 void Robot::TestPeriodic() {}
 

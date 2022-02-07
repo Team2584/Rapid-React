@@ -8,6 +8,7 @@
 #include "networktables/NetworkTableInstance.h"
 #include "networktables/NetworkTableEntry.h"
 #include "networktables/NetworkTableValue.h"
+#include "networktables/NetworkTableNumber.h"
 #include "wpi/span.h"
 
 using namespace frc;

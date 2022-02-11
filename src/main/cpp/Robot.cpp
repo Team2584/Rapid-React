@@ -12,7 +12,7 @@
 #include "wpi/span.h"
 
 using namespace frc;
-using namespace std;
+//using namespace std;
 
 double leftleadmotorID = 1, rightleadmotorID = 3, leftfollowmotorID = 4 , rightfollowermotorID = 2;
   rev::CANSparkMax m_leftfront{leftleadmotorID, rev::CANSparkMax::MotorType::kBrushless};
@@ -82,8 +82,6 @@ void Robot::TeleopPeriodic() {
     // float heading_error = tx;
     float steering_adjust = KpX * tx;
     float driving_adjust = KpY * ty;
-
-    
 
     // if -ty then go forward
     // if + ty go backwards

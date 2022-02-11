@@ -70,9 +70,9 @@ void Robot::TeleopPeriodic() {
   float KpX = -0.02;
   float KpY = -0.01;
 
-  double tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("<tx>",0.0);
+  double tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx",0.0);
   tx = (double) tx;
-  double ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("<ty>",0.0);
+  double ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty",0.0);
   ty = (double) ty;
 
   if (m_stick->GetRawButton(2)){

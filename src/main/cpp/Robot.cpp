@@ -103,7 +103,7 @@ void Robot::TeleopPeriodic(){
       drive.TankDrive(-steering_adjust, -steering_adjust);
     } else if ((tx < 2.5 && tx > -2.5) && (ta <= 4)){
       drive.TankDrive(.3,-.3);
-    } else if ((tx < 2.5 && tx > -2.5) && (ta <= 4)){
+    } else if ((tx < 2.5 && tx > -2.5) && (ta >= 5.5)){
       drive.TankDrive(-.3,.3);
     } else{
       drive.TankDrive(0, 0);

@@ -97,17 +97,17 @@ void Robot::TeleopPeriodic(){
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
       ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
      
-      float KpX = -0.07;
+      // float KpX = -0.05;
       float steering_adjust = KpX * tx;
 
-      drive.TankDrive(-steering_adjust, -steering_adjust);
-    } else if ((tx < 2.5 && tx > -2.5) && (ta <= 7)){
+      drive.TankDrive(-(steering_adjust+0.01), -(steering_adjust+0.01));
+    } else if ((tx < 2.5 && tx > -2.5) && (ta <= 6)){
       tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
       ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
 
       drive.TankDrive(.3,-.3);
-    } else if ((tx < 2.5 && tx > -2.5) && (ta >= 7.5)){
+    } else if ((tx < 2.5 && tx > -2.5) && (ta >= 6.5)){
       tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
       ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
@@ -138,10 +138,10 @@ void Robot::TeleopPeriodic(){
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
       ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
      
-      float KpX = -0.07;
+      // float KpX = -0.05;
       float steering_adjust = KpX * tx;
 
-      drive.TankDrive(-steering_adjust, -steering_adjust);
+      drive.TankDrive(-(steering_adjust+0.01), -(steering_adjust+0.01));
     } else{
       tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
@@ -153,7 +153,7 @@ void Robot::TeleopPeriodic(){
 
     //Regular Turn Tracking (Stops NEAR Object)
     /*
-    double tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
+    tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
 
     float steering_adjust = KpX * tx;
 

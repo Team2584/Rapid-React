@@ -14,7 +14,7 @@
 using namespace frc;
 //using namespace std;
 
-double leftleadmotorID = 1, rightleadmotorID = 3, leftfollowmotorID = 4 , rightfollowermotorID = 2;
+double leftleadmotorID = 1, rightleadmotorID = 3, leftfollowmotorID = 2 , rightfollowermotorID = 4;
   rev::CANSparkMax m_leftfront{leftleadmotorID, rev::CANSparkMax::MotorType::kBrushless};
   rev::CANSparkMax m_leftback{leftfollowmotorID, rev::CANSparkMax::MotorType::kBrushless};
   rev::CANSparkMax m_rightfront{rightleadmotorID, rev::CANSparkMax::MotorType::kBrushless};
@@ -70,46 +70,15 @@ void Robot::TeleopPeriodic() {
   float KpX = -0.02;
   float KpY = -0.01;
 
-  double tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx",0.0);
-  tx = (double) tx;
-  double ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty",0.0);
-  ty = (double) ty;
-
   if (m_stick->GetRawButton(2)){
-    // nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("<tx>",0.0);
-    // nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("<ty>",0.0);
+    
+      double tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx",0.0);
+      double ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty",0.0);
+      
+      float steering_adjust = KpX * tx;
+      float driving_adjust = KpY * ty;
 
-    // float heading_error = tx;
-    float steering_adjust = KpX * tx;
-    float driving_adjust = KpY * ty;
-
-    // if -ty then go forward
-    // if + ty go backwards
-
-    //float rotations = (steering_adjust/(6*pi))*8.68;
-
-//     while (tx > 7.5 || tx < -7.5){
-    //Rotation tracking
-      drive.TankDrive(-steering_adjust, steering_adjust);
-//     }
-//     while (tx < 7.5 && tx > -7.5){
-//       drive.TankDrive(driving_adjust, driving_adjust);
-//     }
-
-
-    //drive.TankDrive(-steering_adjust, steering_adjust);
-
-
-
-    //drive.ArcadeDrive(0, -steering_adjust);
-
-    // m_leftfront.Set(-steering_adjust);
-    // m_rightfront.Set(steering_adjust);
-
-    //drive.tankDrive(steering_adjust, -steering_adjust);
-
-    //m_leftfront += steering_adjust;
-    //m_rightfront -= steering_adjust;
+      drive.TankDrive(-steering_adjust, -steering_adjust);
   }
 }
 

@@ -73,7 +73,7 @@ void Robot::AutonomousPeriodic()
 void Robot::TeleopInit() {}
 
 void Robot::TeleopPeriodic(){
-  float KpX = -0.03;
+  float KpX = -0.02;
   float KpY = -0.01;
 
   if (m_stick->GetRawButton(2)){
@@ -82,13 +82,13 @@ void Robot::TeleopPeriodic(){
     double ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
     
     //Turn & Driving Tracking (Aligns well enough to shoot)
-    /*
+    ///*
     if(!(tx < 7.5 && tx > -7.5)){
       tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
       ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
       
-      float KpX = -0.03;
+      //float KpX = -0.03;
       float steering_adjust = KpX * tx;
 
       drive.TankDrive(-steering_adjust, -steering_adjust);
@@ -100,19 +100,19 @@ void Robot::TeleopPeriodic(){
       // float KpX = -0.05;
       float steering_adjust = KpX * tx;
 
-      drive.TankDrive(-(steering_adjust+0.01), -(steering_adjust+0.01));
-    } else if ((tx < 2.5 && tx > -2.5) && (ta <= 6)){
+      drive.TankDrive(-(steering_adjust+0.0001), -(steering_adjust+0.0001));
+    } else if ((tx < 3.5 && tx > -3.5) && (ta <= 6)){
       tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
       ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
 
-      drive.TankDrive(.3,-.3);
-    } else if ((tx < 2.5 && tx > -2.5) && (ta >= 6.5)){
+      drive.TankDrive(.55,-.55);
+    } else if ((tx < 3.5 && tx > -3.5) && (ta >= 6.5)){
       tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
       ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
 
-      drive.TankDrive(-.3,.3);
+      drive.TankDrive(-.55,.55);
     } else{
       tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
@@ -129,11 +129,11 @@ void Robot::TeleopPeriodic(){
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
       ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
       
-      float KpX = -0.03;
+      //float KpX = -0.03;
       float steering_adjust = KpX * tx;
 
       drive.TankDrive(-steering_adjust, -steering_adjust);
-    } else if(!(tx < 2.5 && tx > -2.5)){
+    } else if(!(tx < 5.5 && tx > -5.5)){
       tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
       ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
@@ -141,7 +141,7 @@ void Robot::TeleopPeriodic(){
       // float KpX = -0.05;
       float steering_adjust = KpX * tx;
 
-      drive.TankDrive(-(steering_adjust+0.01), -(steering_adjust+0.01));
+      drive.TankDrive(-(steering_adjust+0.001), -(steering_adjust+0.001));
     } else{
       tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
       ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);

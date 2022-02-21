@@ -242,7 +242,7 @@ void Robot::AutonomousPeriodic() {
   }*/
   switch(autonState){
     case 0:
-      //back intake
+      //m_intakeBackMotor.Set(0.5);
       m_drive.ArcadeDrive(0.5, 0);
       SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
       if (m_leftEncoder.GetPosition() >= ((40/(6*M_PI))*8.68)){
@@ -256,7 +256,7 @@ void Robot::AutonomousPeriodic() {
       }
       break;
     case 1:
-      //start flywheel to bumper speed
+      m_flywheelMotor.Set(0.6);
       m_drive.ArcadeDrive(-0.5, 0);
       if (m_leftEncoder.GetPosition() <= ((-40/(6*M_PI))*8.68)){
         autonState += 1;
@@ -268,9 +268,20 @@ void Robot::AutonomousPeriodic() {
       }
       break;
     case 2:
-      //flywheel to speed then shoot
-      Wait(units::time::second_t(2.0));
-      autonState += 1;
+      if (m_flywheelMotor.GetSelectedSensorVelocity() * 600 / 2048 >= flywheelMaxRPM * 0.55){
+        m_lowerTowerMotor.Set(0.6);
+        m_indexerMotor.Set(0.6);
+        Wait(units::time::second_t(2.0));
+        autonState += 1;
+        m_flywheelMotor.Set(0);
+        m_indexerMotor.Set(0);
+        m_lowerTowerMotor.Set(0);
+        m_leftEncoder.SetPosition(0);
+        m_rightEncoder.SetPosition(0);
+        m_leftLeadMotor.Disable();
+        m_rightLeadMotor.Disable();
+        _gyro.SetFusedHeading(0);
+      }
       break;
     case 3:
       m_drive.ArcadeDrive(0, -0.5);
@@ -294,6 +305,18 @@ void Robot::AutonomousPeriodic() {
         _gyro.SetFusedHeading(0);
       }
       break;
+    case 5:
+      //start go to furthest back ball
+      //run belts for a second or so
+      //remember to not immediately switch directions
+      break;
+    case 6:
+      //start flywheel
+      //go forward to bumper
+      break;
+    case 7:
+      //shoot balls
+    
   }
 }
 

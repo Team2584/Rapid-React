@@ -116,6 +116,11 @@ PS4Controller *cont_Driver = new PS4Controller(0);
 PS4Controller *cont_Partner = new PS4Controller(1);
 double joy_lStick_Y_deadband = 0.05, joy_rStick_Y_deadband = 0.05, joy_rStick_X_deadband = 0.05;
 
+//hood
+static const int m_hoodID = 15;
+rev::CANSparkMax m_hoodMotor{m_hoodID, rev::CANSparkMax::MotorType::kBrushless};
+rev::SparkMaxRelativeEncoder m_hoodEncoder = m_hoodMotor.GetEncoder();
+
 double getLeftEncoderDist(){
   return m_leftEncoder.GetPosition() / 42/*ticks per rev*/ * driveGearRatio * (2 * M_PI * 0.0762)/*dist per rev in meters*/;
 }
@@ -193,6 +198,7 @@ void Robot::AutonomousInit() {
   m_rightEncoder.SetPosition(0);
   autonState = 0;
   _gyro.SetFusedHeading(0);
+  m_hoodEncoder.SetPosition(0);
   m_leftLeadMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
   m_rightLeadMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
   m_rightFollowMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
@@ -252,7 +258,9 @@ void Robot::AutonomousPeriodic() {
         m_leftLeadMotor.Disable();
         m_rightLeadMotor.Disable();
         _gyro.SetFusedHeading(0);
+        //m_lowerTowerMotor.Set(0.6);
         Wait(units::time::second_t(1));
+        m_lowerTowerMotor.Set(0);
       }
       break;
     case 1:
@@ -268,14 +276,9 @@ void Robot::AutonomousPeriodic() {
       }
       break;
     case 2:
-      if (m_flywheelMotor.GetSelectedSensorVelocity() * 600 / 2048 >= flywheelMaxRPM * 0.55){
-        m_lowerTowerMotor.Set(0.6);
-        m_indexerMotor.Set(0.6);
-        Wait(units::time::second_t(2.0));
+      m_drive.ArcadeDrive(0, -0.5);
+      if (_gyro.GetFusedHeading() <= -8){
         autonState += 1;
-        m_flywheelMotor.Set(0);
-        m_indexerMotor.Set(0);
-        m_lowerTowerMotor.Set(0);
         m_leftEncoder.SetPosition(0);
         m_rightEncoder.SetPosition(0);
         m_leftLeadMotor.Disable();
@@ -284,6 +287,28 @@ void Robot::AutonomousPeriodic() {
       }
       break;
     case 3:
+      if (m_flywheelMotor.GetSelectedSensorVelocity() * 600 / 2048 >= flywheelMaxRPM * 0.55){
+        m_indexerMotor.Set(-0.6);
+        Wait(units::time::second_t(1.0));
+        m_hoodEncoder.SetPosition(0);
+        m_hoodMotor.Set(-0.5);
+        if (m_hoodEncoder.GetPosition() >= -20){
+          m_lowerTowerMotor.Set(0.6);
+          Wait(units::time::second_t(1.0));
+          autonState += 1;
+          m_flywheelMotor.Set(0);
+          m_indexerMotor.Set(0);
+          m_lowerTowerMotor.Set(0);
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_hoodEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+      }
+      break;
+    case 4:
       m_drive.ArcadeDrive(0, -0.5);
       if (_gyro.GetFusedHeading() <= -45){
         autonState += 1;
@@ -294,7 +319,7 @@ void Robot::AutonomousPeriodic() {
         _gyro.SetFusedHeading(0);
       }
       break;
-    case 4:
+    case 5:
       m_drive.ArcadeDrive(0.5, 0);
       if (m_leftEncoder.GetPosition() >= ((70/(6*M_PI))*8.68)){
         autonState += 1;
@@ -305,16 +330,17 @@ void Robot::AutonomousPeriodic() {
         _gyro.SetFusedHeading(0);
       }
       break;
-    case 5:
+    case 6:
       //start go to furthest back ball
       //run belts for a second or so
       //remember to not immediately switch directions
       break;
-    case 6:
+    case 7:
       //start flywheel
       //go forward to bumper
       break;
-    case 7:
+    case 8:
+      break;
       //shoot balls
     
   }
@@ -324,6 +350,17 @@ void Robot::TeleopInit() {}
 
 void Robot::TeleopPeriodic() {
   SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
+  /*
+  */
+  if (cont_Partner->GetPOV() == 90){
+    m_hoodMotor.Set(0.25);
+  }
+  else if (cont_Partner->GetPOV() == 270){
+    m_hoodMotor.Set(-0.25);
+  }
+  else{
+    m_hoodMotor.Set(0);
+  }
   /*
    .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------. 
   | .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. |

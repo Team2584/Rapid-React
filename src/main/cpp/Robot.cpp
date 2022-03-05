@@ -31,9 +31,17 @@
 #include <frc/Compressor.h>
 #include <frc/DoubleSolenoid.h>
 
+#include <frc/drive/differentialdrive.h>
 #include "networktables/NetworkTable.h"
+#include <networktables/NetworkTableEntry.h>
+#include <networktables/EntryListenerFlags.h>
 #include "networktables/NetworkTableInstance.h"
 #include "cameraserver/CameraServer.h"
+
+#include <frc/drive/differentialdrive.h>
+#include <networktables/NetworkTableEntry.h>
+#include <networktables/EntryListenerFlags.h>
+
 
 #include <iostream>
 #include <thread>
@@ -229,6 +237,14 @@ void Robot::RobotInit() {
   SmartDashboard::PutNumber("Flywheel Tarmac RPM", 5742 * flywheelGearRatio * 0.8);
   SmartDashboard::PutNumber("Flywheel Fender RPM", 5742 * flywheelGearRatio * 0.6);
   SmartDashboard::PutNumber("Whinch Percent", 0.5);
+
+  // Values for limelight
+  float KpX = -0.02;
+  float KpY = -0.01;
+
+  double tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
+  double ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
+  double ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
 }
 
 void Robot::RobotPeriodic() {
@@ -376,7 +392,6 @@ void Robot::AutonomousPeriodic() {
       m_hoodEncoder.SetPosition(0);
       _gyro.SetFusedHeading(0);
       break;
-    
   }
 }
 
@@ -385,12 +400,16 @@ void Robot::TeleopInit() {
   m_rightLeadMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
   m_leftFollowMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
   m_rightFollowMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
+
+  m_flywheelMotor.ConfigFactoryDefault();
+  m_flywheelMotor.SetSensorPhase(false);
+  m_flywheelMotor.ConfigSelectedFeedbackSensor(FeedbackDevice::IntegratedSensor);
 }
 
 void Robot::TeleopPeriodic() {
   SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
-  /*
-  */
+  frc::SmartDashboard::PutNumber("Falcon RPM:", (m_flywheelMotor.GetSelectedSensorVelocity(0)/2048)*600); 
+  
   if (cont_Partner->GetPOV() == 90){
     m_hoodMotor.Set(-0.5);
   }
@@ -400,6 +419,64 @@ void Robot::TeleopPeriodic() {
   else{
     m_hoodMotor.Disable();
   }
+
+  if (cont_Driver->GetPOV() == 0){
+    tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
+    ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
+    ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
+    
+    float KpX = -0.02;
+
+    //Turn & Driving Tracking (SHOULD Align well enough to shoot)
+    if(!(tx < 7.5 && tx > -7.5)){
+      //float KpX = -0.03;
+      float steering_adjust = KpX * tx;
+
+      m_drive.TankDrive(-steering_adjust, -steering_adjust);
+    } else if(!(tx < 2.5 && tx > -2.5)){
+
+      // float KpX = -0.05;
+      float steering_adjust = KpX * tx;
+
+      m_drive.TankDrive(-(steering_adjust+0.0001), -(steering_adjust+0.0001));
+
+    } else if ((tx < 3.5 && tx > -3.5) && (ta <= 0.007)){
+
+      //Adjust ta (target area) value to be a good distance away from the hub to shoot and score
+      m_drive.TankDrive(.22,-.22);
+
+    } else if ((tx < 3.5 && tx > -3.5) && (ta >= 0.008)){
+
+      //Adjust ta (target area) value to be a good distance away from the hub to shoot and score
+      m_drive.TankDrive(-.22,.22);
+
+    } else{
+
+      m_drive.TankDrive(0, 0);
+
+    }
+    tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
+    ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
+    ta = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ta", 0.0);
+  }
+
+  else if (cont_Driver->GetPOV() == 180){
+    // Convert Encoder Values to RPM
+    double normalizedRPM = (m_flywheelMotor.GetSelectedSensorVelocity(0)/2048)*600;
+
+    flywheelTargetPCT = 0.268;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
+
+    // Spin flywheel at 3825 rpm. Flywheel 60% = 3750 rpm
+
+    // mFeed.Set(centerIntake);
+    if (normalizedRPM > 3745 && normalizedRPM < 3890){
+      m_indexerMotor.Set(.5);
+      m_lowerTowerMotor.Set(.22);
+    }
+    // mIndexer.Set(0);
+  }
+
 
   /*
    .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------. 
@@ -414,24 +491,20 @@ void Robot::TeleopPeriodic() {
   | '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |
    '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------' 
   */
-  if (cont_Driver->GetPOV() == 90){
+  else if (cont_Driver->GetPOV() == 90){
     sol_climber.Set(frc::DoubleSolenoid::Value::kForward);
   }
   else if (cont_Driver->GetPOV() == 270){
     sol_climber.Set(frc::DoubleSolenoid::Value::kReverse);
   }
 
-  if (cont_Driver->GetPOV() == 0){
+  else if (cont_Driver->GetPOV() == 0){
     m_leftWhinchMotor.Set(0.5);
     m_rightWhinchMotor.Set(0.5);
   }
   else if (cont_Driver->GetPOV() == 180){
     m_leftWhinchMotor.Set(-0.5);
     m_rightWhinchMotor.Set(-0.5);
-  }
-  else {
-    m_leftWhinchMotor.Disable();
-    m_rightWhinchMotor.Disable();
   }
 
   /*
@@ -447,7 +520,7 @@ void Robot::TeleopPeriodic() {
   | '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |
    '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------' 
   */
-  if (cont_Partner->GetR2Button()){
+  else if (cont_Partner->GetR2Button()){
     m_indexerMotor.Set(-0.75);
   }
   else if (cont_Partner->GetL2Button()){
@@ -455,6 +528,8 @@ void Robot::TeleopPeriodic() {
   }
   else {
     m_indexerMotor.Set(0);
+    m_leftWhinchMotor.Disable();
+    m_rightWhinchMotor.Disable();
   }
 
   /*

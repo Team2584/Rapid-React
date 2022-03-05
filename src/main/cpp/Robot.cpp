@@ -410,10 +410,10 @@ void Robot::TeleopPeriodic() {
   SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
   frc::SmartDashboard::PutNumber("Falcon RPM:", (m_flywheelMotor.GetSelectedSensorVelocity(0)/2048)*600); 
   
-  if (cont_Partner->GetPOV() == 90){
+  if (cont_Driver->GetPOV() == 90){
     m_hoodMotor.Set(-0.5);
   }
-  else if (cont_Partner->GetPOV() == 270){
+  else if (cont_Driver->GetPOV() == 270){
     m_hoodMotor.Set(0.5);
   }
   else{
@@ -491,18 +491,18 @@ void Robot::TeleopPeriodic() {
   | '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |
    '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------' 
   */
-  else if (cont_Driver->GetPOV() == 90){
+  else if (cont_Partner->GetPOV() == 90){
     sol_climber.Set(frc::DoubleSolenoid::Value::kForward);
   }
-  else if (cont_Driver->GetPOV() == 270){
+  else if (cont_Partner->GetPOV() == 270){
     sol_climber.Set(frc::DoubleSolenoid::Value::kReverse);
   }
 
-  else if (cont_Driver->GetPOV() == 0){
+  else if (cont_Partner->GetPOV() == 0){
     m_leftWhinchMotor.Set(0.5);
     m_rightWhinchMotor.Set(0.5);
   }
-  else if (cont_Driver->GetPOV() == 180){
+  else if (cont_Partner->GetPOV() == 180){
     m_leftWhinchMotor.Set(-0.5);
     m_rightWhinchMotor.Set(-0.5);
   }

@@ -112,6 +112,7 @@ DifferentialDriveKinematics kinematics(units::length::meter_t(0.7633));
 DifferentialDriveOdometry odometry(getGyroAngle(), position);
 frc::SimpleMotorFeedforward<units::meters> feedfwd(ks * 1.0_V, kv * 1_V * 1_s / 1_m, ka * 1_V * 1_s * 1_s / 1_m);
 
+int countt = 0;
 //Intake, Ball runs
 static const int m_intakeFrontID = 9, m_intakeBackID = 7, m_lowerTowerID = 6, m_indexerID = 5;
 rev::CANSparkMax m_intakeFrontMotor{m_intakeFrontID, rev::CANSparkMax::MotorType::kBrushed};
@@ -464,19 +465,23 @@ void Robot::TeleopPeriodic() {
     // Convert Encoder Values to RPM
     double normalizedRPM = (m_flywheelMotor.GetSelectedSensorVelocity(0)/2048)*600;
 
-    flywheelTargetPCT = 0.268;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
+    flywheelTargetPCT = 0.628;
+    // m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
 
+    m_flywheelMotor.Set(motorcontrol::ControlMode::PercentOutput, flywheelTargetPCT);
     // Spin flywheel at 3825 rpm. Flywheel 60% = 3750 rpm
 
     // mFeed.Set(centerIntake);
     if (normalizedRPM > 3745 && normalizedRPM < 3890){
-      m_indexerMotor.Set(.5);
-      m_lowerTowerMotor.Set(.22);
+      m_indexerMotor.Set(-.5);
+      countt += 1;
+
+      if (countt % 65 == 0){
+        m_lowerTowerMotor.Set(.35);
+      }
     }
     // mIndexer.Set(0);
   }
-
 
   /*
    .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------. 
@@ -526,10 +531,47 @@ void Robot::TeleopPeriodic() {
   else if (cont_Partner->GetL2Button()){
     m_indexerMotor.Set(0.75);
   }
-  else {
-    m_indexerMotor.Set(0);
-    m_leftWhinchMotor.Disable();
-    m_rightWhinchMotor.Disable();
+  
+  /*
+  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------. 
+  | .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. |
+  | |  _________   | || |   _____      | || |  ____  ____  | || | _____  _____ | || |  ____  ____  | || |  _________   | || |  _________   | || |   _____      | |
+  | | |_   ___  |  | || |  |_   _|     | || | |_  _||_  _| | || ||_   _||_   _|| || | |_   ||   _| | || | |_   ___  |  | || | |_   ___  |  | || |  |_   _|     | |
+  | |   | |_  \_|  | || |    | |       | || |   \ \  / /   | || |  | | /\ | |  | || |   | |__| |   | || |   | |_  \_|  | || |   | |_  \_|  | || |    | |       | |
+  | |   |  _|      | || |    | |   _   | || |    \ \/ /    | || |  | |/  \| |  | || |   |  __  |   | || |   |  _|  _   | || |   |  _|  _   | || |    | |   _   | |
+  | |  _| |_       | || |   _| |__/ |  | || |    _|  |_    | || |  |   /\   |  | || |  _| |  | |_  | || |  _| |___/ |  | || |  _| |___/ |  | || |   _| |__/ |  | |
+  | | |_____|      | || |  |________|  | || |   |______|   | || |  |__/  \__|  | || | |____||____| | || | |_________|  | || | |_________|  | || |  |________|  | |
+  | |              | || |              | || |              | || |              | || |              | || |              | || |              | || |              | |
+  | '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |
+   '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------' 
+  */
+  else if (cont_Partner->GetTriangleButtonPressed()){
+    flywheelTargetPCT = 0.3;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
+  }
+  else if (cont_Partner->GetSquareButtonPressed()){
+    flywheelTargetPCT = 0.55;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
+  }
+  else if (cont_Partner->GetCircleButtonPressed()){
+    flywheelTargetPCT = 0.85;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
+  }
+  else if (cont_Partner->GetCrossButtonPressed()){
+    flywheelTargetPCT = 0.6;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
+  }
+  else if (cont_Partner->GetPSButtonPressed()){
+    flywheelTargetPCT = 0;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelTargetPCT);
+  }
+  else if (cont_Partner->GetR1ButtonPressed()){
+    flywheelTargetPCT += 0.05;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
+  }
+  else if (cont_Partner->GetL1ButtonPressed()){
+    flywheelTargetPCT -= 0.05;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
   }
 
   /*
@@ -545,13 +587,17 @@ void Robot::TeleopPeriodic() {
   | '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |
    '----------------'  '----------------'  '----------------'  '----------------'  '----------------'
   */
-  if (cont_Driver->GetR1Button()){
+  else if (cont_Driver->GetR1Button()){
     m_lowerTowerMotor.Set(0.75);
   }
   else if (cont_Driver->GetL1Button()){
     m_lowerTowerMotor.Set(-0.75);
   }
   else {
+    m_indexerMotor.Set(0);
+    m_leftWhinchMotor.Disable();
+    m_rightWhinchMotor.Disable();
+    m_flywheelMotor.Set(motorcontrol::ControlMode::PercentOutput, 0.0);
     m_lowerTowerMotor.Set(0);
   }
 
@@ -586,48 +632,6 @@ void Robot::TeleopPeriodic() {
   }
   else if (cont_Driver->GetCrossButtonPressed()){
     sol_frontIntakeSolenoid.Set(frc::DoubleSolenoid::Value::kForward);
-  }
-
-  /*
-  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------. 
-  | .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. |
-  | |  _________   | || |   _____      | || |  ____  ____  | || | _____  _____ | || |  ____  ____  | || |  _________   | || |  _________   | || |   _____      | |
-  | | |_   ___  |  | || |  |_   _|     | || | |_  _||_  _| | || ||_   _||_   _|| || | |_   ||   _| | || | |_   ___  |  | || | |_   ___  |  | || |  |_   _|     | |
-  | |   | |_  \_|  | || |    | |       | || |   \ \  / /   | || |  | | /\ | |  | || |   | |__| |   | || |   | |_  \_|  | || |   | |_  \_|  | || |    | |       | |
-  | |   |  _|      | || |    | |   _   | || |    \ \/ /    | || |  | |/  \| |  | || |   |  __  |   | || |   |  _|  _   | || |   |  _|  _   | || |    | |   _   | |
-  | |  _| |_       | || |   _| |__/ |  | || |    _|  |_    | || |  |   /\   |  | || |  _| |  | |_  | || |  _| |___/ |  | || |  _| |___/ |  | || |   _| |__/ |  | |
-  | | |_____|      | || |  |________|  | || |   |______|   | || |  |__/  \__|  | || | |____||____| | || | |_________|  | || | |_________|  | || |  |________|  | |
-  | |              | || |              | || |              | || |              | || |              | || |              | || |              | || |              | |
-  | '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |
-   '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------' 
-  */
-  if (cont_Partner->GetTriangleButtonPressed()){
-    flywheelTargetPCT = 0.3;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
-  }
-  else if (cont_Partner->GetSquareButtonPressed()){
-    flywheelTargetPCT = 0.55;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
-  }
-  else if (cont_Partner->GetCircleButtonPressed()){
-    flywheelTargetPCT = 0.85;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
-  }
-  else if (cont_Partner->GetCrossButtonPressed()){
-    flywheelTargetPCT = 0.6;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
-  }
-  else if (cont_Partner->GetPSButtonPressed()){
-    flywheelTargetPCT = 0;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelTargetPCT);
-  }
-  else if (cont_Partner->GetR1ButtonPressed()){
-    flywheelTargetPCT += 0.05;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
-  }
-  else if (cont_Partner->GetL1ButtonPressed()){
-    flywheelTargetPCT -= 0.05;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
   }
 
   /*

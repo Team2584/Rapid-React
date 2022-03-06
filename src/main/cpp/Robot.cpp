@@ -27,6 +27,7 @@
 #include <frc/controller/PIDController.h>
 #include <frc/DigitalInput.h>
 #include <frc/encoder.h>
+#include <frc/DigitalInput.h>
 
 #include <frc/Compressor.h>
 #include <frc/DoubleSolenoid.h>
@@ -58,9 +59,6 @@ auto inst = nt::NetworkTableInstance::GetDefault();
 auto limeTable = inst.GetTable("limelight");
 
 frc2::PIDController autoAimPID(0.05, 0.001, .005);
-double tx = limeTable->GetNumber("tx",0.0);                   //Get horizontal off set from target
-double ty = limeTable->GetNumber("ty",0.0);                   //Get vertical offset from target
-double ta = limeTable->GetNumber("ta",0.0);                   //Get area of target on screen
 
 //Drive Base
 static const int m_leftLeadID = 1, m_rightLeadID = 3, m_leftFollowID = 2, m_rightFollowID = 4;
@@ -69,18 +67,12 @@ rev::CANSparkMax m_rightLeadMotor{m_rightLeadID, rev::CANSparkMax::MotorType::kB
 rev::CANSparkMax m_leftFollowMotor{m_leftFollowID, rev::CANSparkMax::MotorType::kBrushless};
 rev::CANSparkMax m_rightFollowMotor{m_rightFollowID, rev::CANSparkMax::MotorType::kBrushless};
 double m_leftOut = 0, m_rightOut = 0;
-
-double drivekP = 6e-5, drivekI = 1e-6, drivekD = 0, drivekIz = 0, drivekFF = 0.000015, drivekMaxOutput = 1.0, drivekMinOutput = -1.0, driveMaxRPM = 5108, driveGearRatio = 8.68;
-rev::SparkMaxPIDController m_leftPID = m_leftLeadMotor.GetPIDController();
-rev::SparkMaxPIDController m_rightPID = m_rightLeadMotor.GetPIDController();
+double driveGearRatio = 8.68;
 
 rev::SparkMaxRelativeEncoder m_leftEncoder = m_leftLeadMotor.GetEncoder();
-//rev::SparkMaxRelativeEncoder m_leftEncoderABS = m_leftLeadMotor.GetEncoder();
 rev::SparkMaxRelativeEncoder m_rightEncoder = m_rightLeadMotor.GetEncoder();
-//rev::SparkMaxRelativeEncoder m_rightEncoderABS = m_rightLeadMotor.GetEncoder();
 
 frc::DifferentialDrive m_drive{m_leftLeadMotor, m_rightLeadMotor};
-frc2::PIDController driveControl{drivekP, drivekI, drivekD};
 
 WPI_PigeonIMU _gyro(0);
 Rotation2d getGyroAngle(){
@@ -91,11 +83,11 @@ Rotation2d getGyroAngle(){
 //Flywheel
 WPI_TalonFX m_flywheelMotor{12};
 frc2::PIDController m_flywheelPID{0.0008, 0, 0, units::time::second_t(50)};
-//frc2::PIDController m_flywheelPID{}
 double flywheelGearRatio = 1;
 double flywheelMaxRPM = 5742/*max rpm of falcon 500 no load -10%*/ * flywheelGearRatio, flywheelMinRPM = 5742 * -0.1/*percent output limit for reverse*/ * flywheelGearRatio;
 double flywheelTargetRPM = 0;
 double flywheelTargetPCT = 0;
+bool shot1Taken, shot2Taken = false;
 
 //Path Weaver
 double ks, kv, ka;
@@ -130,22 +122,13 @@ rev::SparkMaxRelativeEncoder m_hoodEncoder = m_hoodMotor.GetEncoder();
 rev::SparkMaxPIDController m_hoodPID = m_hoodMotor.GetPIDController();
 double targetHoodRotations = 0;
 int hoodPreset = 0;
+frc::DigitalInput hoodLimit(0);
+
+int autonChoice = 0;
 
 double flywheelPcttoRPM(double pct){
-  double rpm = 4096 * flywheelMaxRPM * pct / 600;
+  double rpm = 2048 * flywheelMaxRPM * pct / 600;
   return rpm;
-}
-
-double getHoodRotationsLimelight(double ty){
-  return ty * 50.0/*hood const*/;
-}
-
-double getHoodRotationsDistance(double dist){
-  return dist *20;
-}
-
-double flywheelPCTLimelight(double ty){
-  return ty * 4.0 + 0.6;
 }
 
 double getLeftEncoderDist(){
@@ -163,9 +146,7 @@ void Robot::RobotInit() {
   _compressor.EnableDigital();
   
   m_leftFollowMotor.Follow(m_leftLeadMotor, false);
-  //m_leftLeadMotor.SetInverted(true);
   m_rightFollowMotor.Follow(m_rightLeadMotor, false);
-  //m_rightLeadMotor.SetInverted(true);
 
   m_leftLeadMotor.SetInverted(true);
 
@@ -174,29 +155,14 @@ void Robot::RobotInit() {
   m_rightLeadMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kCoast);
   m_rightFollowMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kCoast);
 
-  m_leftPID.SetP(drivekP);
-  m_leftPID.SetI(drivekI);
-  m_leftPID.SetD(drivekD);
-  m_leftPID.SetIZone(drivekIz);
-  m_leftPID.SetFF(drivekFF);
-  m_leftPID.SetOutputRange(drivekMinOutput, drivekMaxOutput);
-
-  m_rightPID.SetP(drivekP);
-  m_rightPID.SetI(drivekI);
-  m_rightPID.SetD(drivekD);
-  m_rightPID.SetIZone(drivekIz);
-  m_rightPID.SetFF(drivekFF);
-  m_rightPID.SetOutputRange(drivekMinOutput, drivekMaxOutput);
-
   m_rightEncoder.SetPosition(0.0);
-  //m_rightEncoderABS.SetPosition(0);
   m_leftEncoder.SetPosition(0.0);
-  //m_leftEncoderABS.SetPosition(0);
 
   m_intakeBackMotor.SetInverted(true);
   m_intakeFrontMotor.SetInverted(true);
   m_indexerMotor.SetInverted(true);
 
+  m_leftWhinchMotor.SetInverted(true);
   m_rightWhinchMotor.Follow(m_leftWhinchMotor);
   m_leftWhinchMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
   m_rightWhinchMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
@@ -229,25 +195,10 @@ void Robot::RobotInit() {
   SmartDashboard::PutNumber("Flywheel Tarmac RPM", 5742 * flywheelGearRatio * 0.8);
   SmartDashboard::PutNumber("Flywheel Fender RPM", 5742 * flywheelGearRatio * 0.6);
   SmartDashboard::PutNumber("Whinch Percent", 0.5);
+  SmartDashboard::PutNumber("Auton Choice", 0);
 }
 
 void Robot::RobotPeriodic() {
-  /*position = odometry.Update(getGyroAngle(), units::meter_t(getLeftEncoderDist()), units::meter_t(getRightEncoderDist()));
-  autoAimPID.SetSetpoint(0);
-  double ty = 
-  targetHoodRotations = getHoodRotationsLimelight(nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", targetHoodRotations));
-  double targetBasedDist = getHoodRotationsDistance(sqrt(pow(position.X().value(), 2.0) + pow(position.Y().value(), 2.0)));
-  double targetFlywheelRPMLimelight = flywheelPcttoRPM(flywheelPCTLimelight(nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0)));
-  */
-  /*if (m_hoodEncoder.GetPosition() > targetHoodRotations*.9){
-    m_hoodMotor.Set(-0.5);
-  }
-  else if(m_hoodEncoder.GetPosition() < targetHoodRotations*1.1){
-    m_hoodMotor.Set(0.5);
-  }
-  else{
-    m_hoodMotor.Disable();
-  }*/
 }
 
 void Robot::AutonomousInit() {
@@ -259,124 +210,297 @@ void Robot::AutonomousInit() {
   m_rightLeadMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
   m_rightFollowMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
   m_leftFollowMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
+  autonChoice = SmartDashboard::GetNumber("Auton Choice", 0);
 }
 
 void Robot::AutonomousPeriodic() {
-  switch(autonState){
-    case 0:
-      sol_frontIntakeSolenoid.Set(DoubleSolenoid::Value::kForward);
-      m_intakeBackMotor.Set(-0.75);
-      m_intakeFrontMotor.Set(-0.75);
-      m_drive.ArcadeDrive(0.5, 0);
-      SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
-      if (m_leftEncoder.GetPosition() >= ((76/(6*M_PI))*8.68)){
+  if (autonChoice == 0){
+    switch(autonState){
+      case 0:
+        sol_frontIntakeSolenoid.Set(DoubleSolenoid::Value::kForward);
+        m_intakeBackMotor.Set(-0.75);
+        m_intakeFrontMotor.Set(-0.75);
+        m_drive.ArcadeDrive(0.5, 0);
+        SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
+        if (m_leftEncoder.GetPosition() >= ((76/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+          m_lowerTowerMotor.Set(0.6);
+          Wait(units::time::second_t(0.25));
+          m_lowerTowerMotor.Set(0);
+          Wait(units::time::second_t(0.5));
+        }
+        break;
+      case 1:
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.6));
+        m_drive.ArcadeDrive(-0.5, 0);
+        if (m_leftEncoder.GetPosition() <= ((-90/(6*M_PI))*8.68)){
+          autonState += 2;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+      case 3:
+        m_indexerMotor.Set(-0.75);
+        Wait(units::time::second_t(1.0));
+        m_lowerTowerMotor.Set(0.75);
+        Wait(units::time::second_t(1.0));
         autonState += 1;
-        m_leftEncoder.SetPosition(0);
-        m_rightEncoder.SetPosition(0);
-        m_leftLeadMotor.Disable();
-        m_rightLeadMotor.Disable();
-        _gyro.SetFusedHeading(0);
-        m_lowerTowerMotor.Set(0.6);
-        Wait(units::time::second_t(0.25));
-        m_lowerTowerMotor.Set(0);
-        Wait(units::time::second_t(0.5));
-      }
-      break;
-    case 1:
-      m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.3));
-      m_drive.ArcadeDrive(-0.5, 0);
-      if (m_leftEncoder.GetPosition() <= ((-90/(6*M_PI))*8.68)){
-        autonState += 2;
-        m_leftEncoder.SetPosition(0);
-        m_rightEncoder.SetPosition(0);
-        m_leftLeadMotor.Disable();
-        m_rightLeadMotor.Disable();
-        _gyro.SetFusedHeading(0);
-      }
-      break;
-    case 3:
-      m_indexerMotor.Set(-0.75);
-      Wait(units::time::second_t(1.0));
-      m_lowerTowerMotor.Set(0.75);
-      Wait(units::time::second_t(1.0));
-      autonState += 1;
-      m_flywheelMotor.Set(0);
-      m_indexerMotor.Set(0);
-      m_lowerTowerMotor.Set(0);
-      m_leftEncoder.SetPosition(0);
-      m_rightEncoder.SetPosition(0);
-      m_leftLeadMotor.Disable();
-      m_rightLeadMotor.Disable();
-      m_hoodEncoder.SetPosition(0);
-      _gyro.SetFusedHeading(0);
-      break;
-    case 4:
-      m_drive.ArcadeDrive(0, -0.5);
-      if (_gyro.GetFusedHeading() <= -40){
-        autonState += 1;
-        m_leftEncoder.SetPosition(0);
-        m_rightEncoder.SetPosition(0);
-        m_leftLeadMotor.Disable();
-        m_rightLeadMotor.Disable();
-        _gyro.SetFusedHeading(0);
-      }
-      break;
-    case 5:
-      m_drive.ArcadeDrive(0.5, 0);
-      if (m_leftEncoder.GetPosition() >= ((90/(6*M_PI))*8.68)){
-        autonState += 1;
-        m_leftEncoder.SetPosition(0);
-        m_rightEncoder.SetPosition(0);
-        m_leftLeadMotor.Disable();
-        m_rightLeadMotor.Disable();
-        _gyro.SetFusedHeading(0);
-        m_lowerTowerMotor.Set(0.6);
-        m_indexerMotor.Set(0.6);
-        Wait(units::time::second_t(0.75));
+        m_flywheelMotor.Set(0);
         m_indexerMotor.Set(0);
         m_lowerTowerMotor.Set(0);
-      }
-      break;
-    case 6:
-      m_drive.ArcadeDrive(0, 0.5);
-      if (_gyro.GetFusedHeading() >= 10){
-        autonState += 1;
         m_leftEncoder.SetPosition(0);
         m_rightEncoder.SetPosition(0);
         m_leftLeadMotor.Disable();
         m_rightLeadMotor.Disable();
+        m_hoodEncoder.SetPosition(0);
         _gyro.SetFusedHeading(0);
-      }
-      break;
-    case 7:
-      m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.3));
-      m_drive.ArcadeDrive(-0.5, 0);
-      if (m_leftEncoder.GetPosition() <= ((-60/(6*M_PI))*8.68)){
+        break;
+      case 4:
+        m_drive.ArcadeDrive(0, -0.5);
+        if (_gyro.GetFusedHeading() <= -40){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+      case 5:
+        m_drive.ArcadeDrive(0.5, 0);
+        if (m_leftEncoder.GetPosition() >= ((90/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+          m_lowerTowerMotor.Set(0.6);
+          m_indexerMotor.Set(0.6);
+          Wait(units::time::second_t(0.75));
+          m_indexerMotor.Set(0);
+          m_lowerTowerMotor.Set(0);
+        }
+        break;
+      case 6:
+        m_drive.ArcadeDrive(0, 0.5);
+        if (_gyro.GetFusedHeading() >= 10){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+      case 7:
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.6));
+        m_drive.ArcadeDrive(-0.5, 0);
+        if (m_leftEncoder.GetPosition() <= ((-60/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+      case 8:
+        m_indexerMotor.Set(-0.75);
+        Wait(units::time::second_t(1.0));
+        m_lowerTowerMotor.Set(0.75);
+        Wait(units::time::second_t(1.0));
         autonState += 1;
+        m_flywheelMotor.Set(0);
+        m_indexerMotor.Set(0);
+        m_lowerTowerMotor.Set(0);
         m_leftEncoder.SetPosition(0);
         m_rightEncoder.SetPosition(0);
         m_leftLeadMotor.Disable();
         m_rightLeadMotor.Disable();
+        m_hoodEncoder.SetPosition(0);
         _gyro.SetFusedHeading(0);
-      }
-      break;
-    case 8:
-      m_indexerMotor.Set(-0.75);
-      Wait(units::time::second_t(1.0));
-      m_lowerTowerMotor.Set(0.75);
-      Wait(units::time::second_t(1.0));
-      autonState += 1;
-      m_flywheelMotor.Set(0);
-      m_indexerMotor.Set(0);
-      m_lowerTowerMotor.Set(0);
-      m_leftEncoder.SetPosition(0);
-      m_rightEncoder.SetPosition(0);
-      m_leftLeadMotor.Disable();
-      m_rightLeadMotor.Disable();
-      m_hoodEncoder.SetPosition(0);
-      _gyro.SetFusedHeading(0);
-      break;
-    
+        break;
+      
+    }
+  }
+  else if (autonChoice == 1){
+    switch(autonState){
+      case 0:
+        sol_frontIntakeSolenoid.Set(DoubleSolenoid::Value::kForward);
+        m_intakeBackMotor.Set(-0.90);
+        m_intakeFrontMotor.Set(-0.90);
+        m_drive.ArcadeDrive(0.5, 0);
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.74));
+        SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
+        if (m_leftEncoder.GetPosition() >= ((70/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+          m_lowerTowerMotor.Set(0.85);
+          Wait(units::time::second_t(0.25));
+          m_lowerTowerMotor.Set(0);
+          Wait(units::time::second_t(0.5));
+        }
+        break;
+      case 1:
+        Wait(units::time::second_t(0.5));
+        m_indexerMotor.Set(-0.75);
+        Wait(units::time::second_t(1.0));
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.72));
+        m_lowerTowerMotor.Set(0.85);
+        Wait(units::time::second_t(1.0));
+        autonState += 1;
+        //m_flywheelMotor.Set(0);
+        m_indexerMotor.Set(0);
+        m_lowerTowerMotor.Set(0);
+        m_leftEncoder.SetPosition(0);
+        m_rightEncoder.SetPosition(0);
+        m_leftLeadMotor.Disable();
+        m_rightLeadMotor.Disable();
+        m_hoodEncoder.SetPosition(0);
+        _gyro.SetFusedHeading(0);
+        break;
+      case 2:
+        m_drive.ArcadeDrive(0, 0.5);
+        if (_gyro.GetFusedHeading() >= 22){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+      case 3:
+        m_drive.ArcadeDrive(-0.5, 0);
+        if (m_leftEncoder.GetPosition() <= ((-120/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+          m_lowerTowerMotor.Set(0.85);
+          Wait(units::time::second_t(0.25));
+          m_lowerTowerMotor.Set(0);
+          Wait(units::time::second_t(0.5));
+        }
+        break;
+      case 4:
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.70));
+        m_drive.ArcadeDrive(0, -0.5);
+        if (_gyro.GetFusedHeading() <= -91){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+      case 5:
+        Wait(units::time::second_t(0.5));
+        m_indexerMotor.Set(-0.75);
+        Wait(units::time::second_t(1.0));
+        m_lowerTowerMotor.Set(0.85);
+        Wait(units::time::second_t(1.0));
+        autonState += 1;
+        m_flywheelMotor.Set(0);
+        m_indexerMotor.Set(0);
+        m_lowerTowerMotor.Set(0);
+        m_leftEncoder.SetPosition(0);
+        m_rightEncoder.SetPosition(0);
+        m_leftLeadMotor.Disable();
+        m_rightLeadMotor.Disable();
+        m_hoodEncoder.SetPosition(0);
+        _gyro.SetFusedHeading(0);
+        break;
+    }
+  }
+  else if (autonChoice == 2){
+    switch (autonState){
+      case 0:
+        sol_frontIntakeSolenoid.Set(DoubleSolenoid::Value::kForward);
+        m_intakeBackMotor.Set(-0.90);
+        m_intakeFrontMotor.Set(-0.90);
+        m_drive.ArcadeDrive(0.5, 0);
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.74));
+        SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
+        if (m_leftEncoder.GetPosition() >= ((70/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+          m_lowerTowerMotor.Set(0.85);
+          Wait(units::time::second_t(0.25));
+          m_lowerTowerMotor.Set(0);
+          Wait(units::time::second_t(0.5));
+        }
+        break;
+      case 1:
+        Wait(units::time::second_t(0.5));
+        m_indexerMotor.Set(-0.75);
+        Wait(units::time::second_t(1.0));
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.72));
+        m_lowerTowerMotor.Set(0.85);
+        Wait(units::time::second_t(1.0));
+        autonState += 1;
+        m_flywheelMotor.Set(0);
+        m_indexerMotor.Set(0);
+        m_lowerTowerMotor.Set(0);
+        m_leftEncoder.SetPosition(0);
+        m_rightEncoder.SetPosition(0);
+        m_leftLeadMotor.Disable();
+        m_rightLeadMotor.Disable();
+        m_hoodEncoder.SetPosition(0);
+        _gyro.SetFusedHeading(0);
+        break;
+    }
+  }
+  else if (autonChoice == 3){
+    switch (autonState){
+      case 0:
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.6));
+        Wait(units::time::second_t(0.5));
+        m_indexerMotor.Set(-0.75);
+        Wait(units::time::second_t(1.0));
+        autonState += 1;
+        m_flywheelMotor.Set(0);
+        m_indexerMotor.Set(0);
+        m_lowerTowerMotor.Set(0);
+        m_leftEncoder.SetPosition(0);
+        m_rightEncoder.SetPosition(0);
+        m_leftLeadMotor.Disable();
+        m_rightLeadMotor.Disable();
+        m_hoodEncoder.SetPosition(0);
+        _gyro.SetFusedHeading(0);
+        break;
+      case 1:
+        m_drive.ArcadeDrive(0.5, 0.0);
+        if (m_leftEncoder.GetPosition() >= ((125/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+    }
   }
 }
 
@@ -385,17 +509,25 @@ void Robot::TeleopInit() {
   m_rightLeadMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
   m_leftFollowMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
   m_rightFollowMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
+  m_hoodEncoder.SetPosition(0);
 }
 
 void Robot::TeleopPeriodic() {
   SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
+  SmartDashboard::PutNumber("Hood Encoder", m_hoodEncoder.GetPosition());
   /*
   */
   if (cont_Partner->GetPOV() == 90){
     m_hoodMotor.Set(-0.5);
   }
   else if (cont_Partner->GetPOV() == 270){
-    m_hoodMotor.Set(0.5);
+    if (hoodLimit.Get()){
+      m_hoodMotor.Set(0);
+      m_hoodEncoder.SetPosition(0);
+    }
+    else{
+      m_hoodMotor.Set(0.5);
+    }
   }
   else{
     m_hoodMotor.Disable();
@@ -554,6 +686,7 @@ void Robot::TeleopPeriodic() {
     flywheelTargetPCT -= 0.05;
     m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
   }
+  SmartDashboard::PutNumber("Target PCT", flywheelTargetPCT);
 
   /*
   .----------------.  .----------------.  .----------------.  .----------------.  .----------------. 
@@ -589,16 +722,54 @@ void Robot::TeleopPeriodic() {
     cameraSelection.SetString(backCam.GetName());
   }
 
-  if (cont_Partner->GetTouchpad()){
+  if (cont_Driver->GetTouchpad()){
     double tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
-    double steeringAdj = autoAimPID.Calculate(tx >= 0 ? std::clamp(tx, 0.5, 10.0) : std::clamp(tx, -10.0, -0.5));
+    //double steeringAdj = autoAimPID.Calculate(tx >= 0 ? std::clamp(tx, 0.5, 10.0) : std::clamp(tx, -10.0, -0.5));
+    float kpx = -0.02;
+    double steeringAdj = 0;
+    if (tx < 7.5 && tx > -7.5){
+      steeringAdj = kpx * tx;
+    }
+    else if (tx < 2.5 && tx > -2.5){
+      steeringAdj = kpx * tx;
+    }
     m_drive.ArcadeDrive(joy_lStick_Y, steeringAdj);
   }
   else{
     m_drive.ArcadeDrive(joy_lStick_Y*0.8, -joy_rStick_X*0.8);
   }
 
-  //Arcade
+  if (cont_Partner->GetTouchpad()){
+    double ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
+    flywheelTargetRPM = flywheelPcttoRPM((ty*-0.008)+0.3);
+    m_flywheelMotor.Set(ControlMode::Velocity, flywheelTargetRPM);
+    double targetHood = ((ty*3.1011)-15.210);
+    if (m_hoodEncoder.GetPosition() > targetHood*0.95){
+      m_hoodMotor.Set(-0.5);
+    }
+    else if(m_hoodEncoder.GetPosition() < targetHood*1.05){
+      m_hoodMotor.Set(0.5);
+    }
+    else{
+      m_hoodMotor.Set(0);
+    }
+
+    double normalizedRPM = m_flywheelMotor.GetSelectedSensorVelocity()/2048*600;
+    if(normalizedRPM > flywheelTargetRPM*0.95 && normalizedRPM < flywheelTargetRPM*1.05 && !shot1Taken){
+      m_indexerMotor.Set(-0.75);
+      shot1Taken = true;
+    } 
+    else if (normalizedRPM > flywheelTargetRPM*0.95 && normalizedRPM < flywheelTargetRPM*1.05 && !shot2Taken){
+      m_lowerTowerMotor.Set(0.75);
+      shot2Taken = true;
+    }
+    else if(shot2Taken && shot1Taken /*beam break*/){
+      m_indexerMotor.Set(0);
+      m_lowerTowerMotor.Set(0);
+      shot1Taken = false;
+      shot2Taken = false;
+    }
+  }
 }
 void Robot::DisabledInit() {}
 

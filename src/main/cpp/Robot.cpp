@@ -52,7 +52,6 @@ nt::NetworkTableEntry cameraSelection;
 //General 
 Compressor _compressor(frc::PneumaticsModuleType::CTREPCM);
 
-//rev::ColorSensorV3 col_frontleftColorSensor{frc::I2C::Port::kOnboard};
 int autonState = 0;
 
 auto inst = nt::NetworkTableInstance::GetDefault();
@@ -122,6 +121,7 @@ rev::SparkMaxRelativeEncoder m_hoodEncoder = m_hoodMotor.GetEncoder();
 rev::SparkMaxPIDController m_hoodPID = m_hoodMotor.GetPIDController();
 double targetHoodRotations = 0;
 int hoodPreset = 0;
+bool spinningTo = false;
 frc::DigitalInput hoodLimit(0);
 
 int autonChoice = 0;
@@ -188,6 +188,8 @@ void Robot::RobotInit() {
   frontCam = frc::CameraServer::StartAutomaticCapture();
   cameraSelection = nt::NetworkTableInstance::GetDefault().GetTable("")->GetEntry("CameraSelection");
 
+  m_leftWhinchMotor.SetInverted(true);
+
   SmartDashboard::PutNumber("Min Belt Percent", 0.5);
   SmartDashboard::PutNumber("Min Intake Percent", 0.5);
   SmartDashboard::PutNumber("Min Indexer Percent", 0.5);
@@ -218,42 +220,33 @@ void Robot::AutonomousPeriodic() {
     switch(autonState){
       case 0:
         sol_frontIntakeSolenoid.Set(DoubleSolenoid::Value::kForward);
-        m_intakeBackMotor.Set(-0.75);
-        m_intakeFrontMotor.Set(-0.75);
+        m_intakeBackMotor.Set(-0.90);
+        m_intakeFrontMotor.Set(-0.90);
         m_drive.ArcadeDrive(0.5, 0);
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.74));
         SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
-        if (m_leftEncoder.GetPosition() >= ((76/(6*M_PI))*8.68)){
+        if (m_leftEncoder.GetPosition() >= ((60/(6*M_PI))*8.68)){
           autonState += 1;
           m_leftEncoder.SetPosition(0);
           m_rightEncoder.SetPosition(0);
           m_leftLeadMotor.Disable();
           m_rightLeadMotor.Disable();
           _gyro.SetFusedHeading(0);
-          m_lowerTowerMotor.Set(0.6);
+          m_lowerTowerMotor.Set(0.85);
           Wait(units::time::second_t(0.25));
           m_lowerTowerMotor.Set(0);
           Wait(units::time::second_t(0.5));
         }
         break;
       case 1:
-        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.6));
-        m_drive.ArcadeDrive(-0.5, 0);
-        if (m_leftEncoder.GetPosition() <= ((-90/(6*M_PI))*8.68)){
-          autonState += 2;
-          m_leftEncoder.SetPosition(0);
-          m_rightEncoder.SetPosition(0);
-          m_leftLeadMotor.Disable();
-          m_rightLeadMotor.Disable();
-          _gyro.SetFusedHeading(0);
-        }
-        break;
-      case 3:
+        Wait(units::time::second_t(0.5));
         m_indexerMotor.Set(-0.75);
         Wait(units::time::second_t(1.0));
-        m_lowerTowerMotor.Set(0.75);
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.72));
+        m_lowerTowerMotor.Set(0.85);
         Wait(units::time::second_t(1.0));
         autonState += 1;
-        m_flywheelMotor.Set(0);
+        //m_flywheelMotor.Set(0);
         m_indexerMotor.Set(0);
         m_lowerTowerMotor.Set(0);
         m_leftEncoder.SetPosition(0);
@@ -263,9 +256,36 @@ void Robot::AutonomousPeriodic() {
         m_hoodEncoder.SetPosition(0);
         _gyro.SetFusedHeading(0);
         break;
+      case 2:
+        m_drive.ArcadeDrive(0, 0.5);
+        if (_gyro.GetFusedHeading() >= 28){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+      case 3:
+        m_drive.ArcadeDrive(-0.5, 0);
+        if (m_leftEncoder.GetPosition() <= ((-120/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+          m_lowerTowerMotor.Set(0.85);
+          Wait(units::time::second_t(0.25));
+          m_lowerTowerMotor.Set(0);
+          Wait(units::time::second_t(0.5));
+        }
+        break;
       case 4:
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.70));
         m_drive.ArcadeDrive(0, -0.5);
-        if (_gyro.GetFusedHeading() <= -40){
+        if (_gyro.GetFusedHeading() <= -91){
           autonState += 1;
           m_leftEncoder.SetPosition(0);
           m_rightEncoder.SetPosition(0);
@@ -275,49 +295,8 @@ void Robot::AutonomousPeriodic() {
         }
         break;
       case 5:
-        m_drive.ArcadeDrive(0.5, 0);
-        if (m_leftEncoder.GetPosition() >= ((90/(6*M_PI))*8.68)){
-          autonState += 1;
-          m_leftEncoder.SetPosition(0);
-          m_rightEncoder.SetPosition(0);
-          m_leftLeadMotor.Disable();
-          m_rightLeadMotor.Disable();
-          _gyro.SetFusedHeading(0);
-          m_lowerTowerMotor.Set(0.6);
-          m_indexerMotor.Set(0.6);
-          Wait(units::time::second_t(0.75));
-          m_indexerMotor.Set(0);
-          m_lowerTowerMotor.Set(0);
-        }
-        break;
-      case 6:
-        m_drive.ArcadeDrive(0, 0.5);
-        if (_gyro.GetFusedHeading() >= 10){
-          autonState += 1;
-          m_leftEncoder.SetPosition(0);
-          m_rightEncoder.SetPosition(0);
-          m_leftLeadMotor.Disable();
-          m_rightLeadMotor.Disable();
-          _gyro.SetFusedHeading(0);
-        }
-        break;
-      case 7:
-        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.6));
-        m_drive.ArcadeDrive(-0.5, 0);
-        if (m_leftEncoder.GetPosition() <= ((-60/(6*M_PI))*8.68)){
-          autonState += 1;
-          m_leftEncoder.SetPosition(0);
-          m_rightEncoder.SetPosition(0);
-          m_leftLeadMotor.Disable();
-          m_rightLeadMotor.Disable();
-          _gyro.SetFusedHeading(0);
-        }
-        break;
-      case 8:
+        Wait(units::time::second_t(0.5));
         m_indexerMotor.Set(-0.75);
-        Wait(units::time::second_t(1.0));
-        m_lowerTowerMotor.Set(0.75);
-        Wait(units::time::second_t(1.0));
         autonState += 1;
         m_flywheelMotor.Set(0);
         m_indexerMotor.Set(0);
@@ -329,7 +308,72 @@ void Robot::AutonomousPeriodic() {
         m_hoodEncoder.SetPosition(0);
         _gyro.SetFusedHeading(0);
         break;
-      
+      case 6:
+        m_drive.ArcadeDrive(0, -0.5);
+        if (_gyro.GetFusedHeading() <= -13){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+      case 7:
+        m_drive.ArcadeDrive(0.5, 0.0);
+        if (m_leftEncoder.GetPosition() >= ((150/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+          m_lowerTowerMotor.Set(0.85);
+          Wait(units::time::second_t(2));
+          m_lowerTowerMotor.Set(0);
+        }
+        break;
+      case 8:
+        m_drive.ArcadeDrive(-0.5, 0);
+        if (m_leftEncoder.GetPosition() <= ((-150/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+      case 9:
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.74));
+        m_drive.ArcadeDrive(0, 0.5);
+        if (_gyro.GetFusedHeading() >= 13){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+      case 10:
+        Wait(units::time::second_t(0.5));
+        m_indexerMotor.Set(-0.75);
+        Wait(units::time::second_t(1.0));
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.72));
+        m_lowerTowerMotor.Set(0.85);
+        Wait(units::time::second_t(1.0));
+        autonState += 1;
+        //m_flywheelMotor.Set(0);
+        m_indexerMotor.Set(0);
+        m_lowerTowerMotor.Set(0);
+        m_leftEncoder.SetPosition(0);
+        m_rightEncoder.SetPosition(0);
+        m_leftLeadMotor.Disable();
+        m_rightLeadMotor.Disable();
+        m_hoodEncoder.SetPosition(0);
+        _gyro.SetFusedHeading(0);
+        break;
     }
   }
   else if (autonChoice == 1){
@@ -436,9 +480,8 @@ void Robot::AutonomousPeriodic() {
         m_intakeBackMotor.Set(-0.90);
         m_intakeFrontMotor.Set(-0.90);
         m_drive.ArcadeDrive(0.5, 0);
-        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.74));
         SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
-        if (m_leftEncoder.GetPosition() >= ((70/(6*M_PI))*8.68)){
+        if (m_leftEncoder.GetPosition() >= ((100/(6*M_PI))*8.68)){
           autonState += 1;
           m_leftEncoder.SetPosition(0);
           m_rightEncoder.SetPosition(0);
@@ -452,10 +495,28 @@ void Robot::AutonomousPeriodic() {
         }
         break;
       case 1:
+        m_indexerMotor.Set(0.2);
+        sol_frontIntakeSolenoid.Set(DoubleSolenoid::Value::kReverse);
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.55));
+        m_drive.ArcadeDrive(-0.5, 0);
+        SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
+        if (m_leftEncoder.GetPosition() <= ((-80/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+          m_lowerTowerMotor.Set(0.85);
+          Wait(units::time::second_t(0.25));
+          m_lowerTowerMotor.Set(0);
+          Wait(units::time::second_t(0.5));
+        }
+        break;
+      case 2:
         Wait(units::time::second_t(0.5));
-        m_indexerMotor.Set(-0.75);
-        Wait(units::time::second_t(1.0));
-        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.72));
+        m_indexerMotor.Set(-0.85);
+        Wait(units::time::second_t(2.0));
         m_lowerTowerMotor.Set(0.85);
         Wait(units::time::second_t(1.0));
         autonState += 1;
@@ -468,6 +529,18 @@ void Robot::AutonomousPeriodic() {
         m_rightLeadMotor.Disable();
         m_hoodEncoder.SetPosition(0);
         _gyro.SetFusedHeading(0);
+        break;
+      case 3:
+        m_drive.ArcadeDrive(0.5, 0);
+        SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
+        if (m_leftEncoder.GetPosition() >= ((150/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
         break;
     }
   }
@@ -529,7 +602,7 @@ void Robot::TeleopPeriodic() {
       m_hoodMotor.Set(0.5);
     }
   }
-  else{
+  else if(!spinningTo){
     m_hoodMotor.Disable();
   }
 
@@ -628,10 +701,12 @@ void Robot::TeleopPeriodic() {
   if (cont_Driver->GetR2Button()){
     m_intakeFrontMotor.Set(-0.75);
     m_intakeBackMotor.Set(-0.75);
+    m_lowerTowerMotor.Set(0.75);
   }
   else if (cont_Driver->GetL2Button()){
     m_intakeBackMotor.Set(0.75);
     m_intakeFrontMotor.Set(0.75);
+    m_lowerTowerMotor.Set(-0.75);
   }
   else {
     m_intakeBackMotor.Set(-0.2);
@@ -659,20 +734,68 @@ void Robot::TeleopPeriodic() {
    '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------' 
   */
   if (cont_Partner->GetTriangleButtonPressed()){
-    flywheelTargetPCT = 0.3;
+    flywheelTargetPCT = 0.57;
     m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
+  }
+  else if (cont_Partner->GetTriangleButton()){
+    spinningTo = true;
+    if (!hoodLimit.Get()){
+      m_hoodMotor.Set(0.5);
+    }
+  }
+  else if (cont_Partner->GetTriangleButtonReleased()){
+    spinningTo = false;
   }
   else if (cont_Partner->GetSquareButtonPressed()){
-    flywheelTargetPCT = 0.55;
+    flywheelTargetPCT = 0.35;
     m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
   }
+  else if (cont_Partner->GetSquareButton()){
+    spinningTo = true;
+    if (!hoodLimit.Get()){
+      m_hoodMotor.Set(0.5);
+    }
+  }
+  else if (cont_Partner->GetSquareButtonReleased()){
+    spinningTo = false;
+  }
   else if (cont_Partner->GetCircleButtonPressed()){
+    flywheelTargetPCT = 0.60;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
+  }
+  else if (cont_Partner->GetCircleButton()){
+    spinningTo = true;
+    if (m_hoodEncoder.GetPosition() > -210*0.95){
+      m_hoodMotor.Set(-0.5);
+    }
+    else if(m_hoodEncoder.GetPosition() < -210*1.05){
+      m_hoodMotor.Set(0.5);
+    }
+    else{
+      m_hoodMotor.Set(0);
+    }
+  }
+  else if (cont_Partner->GetCircleButtonReleased()){
+    spinningTo = false;
+  }
+  else if (cont_Partner->GetCrossButtonPressed()){
     flywheelTargetPCT = 0.85;
     m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
   }
-  else if (cont_Partner->GetCrossButtonPressed()){
-    flywheelTargetPCT = 0.6;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
+  else if (cont_Partner->GetCrossButton()){
+    spinningTo = true;
+    if (m_hoodEncoder.GetPosition() > -210*0.95){
+      m_hoodMotor.Set(-0.5);
+    }
+    else if(m_hoodEncoder.GetPosition() < -210*1.05){
+      m_hoodMotor.Set(0.5);
+    }
+    else{
+      m_hoodMotor.Set(0);
+    }
+  }
+  else if (cont_Partner->GetCrossButtonReleased()){
+    spinningTo = false;
   }
   else if (cont_Partner->GetPSButtonPressed()){
     flywheelTargetPCT = 0;
@@ -724,8 +847,7 @@ void Robot::TeleopPeriodic() {
 
   if (cont_Driver->GetTouchpad()){
     double tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
-    //double steeringAdj = autoAimPID.Calculate(tx >= 0 ? std::clamp(tx, 0.5, 10.0) : std::clamp(tx, -10.0, -0.5));
-    float kpx = -0.02;
+    float kpx = -0.05;
     double steeringAdj = 0;
     if (tx < 7.5 && tx > -7.5){
       steeringAdj = kpx * tx;
@@ -739,9 +861,11 @@ void Robot::TeleopPeriodic() {
     m_drive.ArcadeDrive(joy_lStick_Y*0.8, -joy_rStick_X*0.8);
   }
 
+
+  //Special Commands
   if (cont_Partner->GetTouchpad()){
     double ty = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("ty", 0.0);
-    flywheelTargetRPM = flywheelPcttoRPM((ty*-0.008)+0.3);
+    flywheelTargetRPM = flywheelPcttoRPM(2*((ty*-0.008)+0.3));
     m_flywheelMotor.Set(ControlMode::Velocity, flywheelTargetRPM);
     double targetHood = ((ty*3.1011)-15.210);
     if (m_hoodEncoder.GetPosition() > targetHood*0.95){
@@ -753,25 +877,14 @@ void Robot::TeleopPeriodic() {
     else{
       m_hoodMotor.Set(0);
     }
-
-    double normalizedRPM = m_flywheelMotor.GetSelectedSensorVelocity()/2048*600;
-    if(normalizedRPM > flywheelTargetRPM*0.95 && normalizedRPM < flywheelTargetRPM*1.05 && !shot1Taken){
-      m_indexerMotor.Set(-0.75);
-      shot1Taken = true;
-    } 
-    else if (normalizedRPM > flywheelTargetRPM*0.95 && normalizedRPM < flywheelTargetRPM*1.05 && !shot2Taken){
-      m_lowerTowerMotor.Set(0.75);
-      shot2Taken = true;
-    }
-    else if(shot2Taken && shot1Taken /*beam break*/){
-      m_indexerMotor.Set(0);
-      m_lowerTowerMotor.Set(0);
-      shot1Taken = false;
-      shot2Taken = false;
-    }
   }
 }
-void Robot::DisabledInit() {}
+void Robot::DisabledInit() {
+  m_leftLeadMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
+  m_leftFollowMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
+  m_rightLeadMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
+  m_rightFollowMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
+}
 
 void Robot::DisabledPeriodic() {}
 

@@ -101,6 +101,8 @@ rev::CANSparkMax m_intakeFrontMotor{m_intakeFrontID, rev::CANSparkMax::MotorType
 rev::CANSparkMax m_intakeBackMotor{m_intakeBackID, rev::CANSparkMax::MotorType::kBrushed};
 rev::CANSparkMax m_lowerTowerMotor{m_lowerTowerID, rev::CANSparkMax::MotorType::kBrushed};
 rev::CANSparkMax m_indexerMotor{m_indexerID, rev::CANSparkMax::MotorType::kBrushed};
+int indexerCounter = 0;
+double feedspeed = 0;
 DoubleSolenoid sol_frontIntakeSolenoid(frc::PneumaticsModuleType::CTREPCM, 2, 3);
 
 //Lift and Climb
@@ -162,8 +164,9 @@ void Robot::RobotInit() {
   m_intakeFrontMotor.SetInverted(true);
   m_indexerMotor.SetInverted(true);
 
-  m_leftWhinchMotor.SetInverted(true);
-  m_rightWhinchMotor.Follow(m_leftWhinchMotor);
+  /*m_leftWhinchMotor.SetInverted(false);
+  m_rightWhinchMotor.SetInverted(false);*/
+  m_rightWhinchMotor.Follow(m_leftWhinchMotor, true);
   m_leftWhinchMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
   m_rightWhinchMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
 
@@ -188,8 +191,6 @@ void Robot::RobotInit() {
   frontCam = frc::CameraServer::StartAutomaticCapture();
   cameraSelection = nt::NetworkTableInstance::GetDefault().GetTable("")->GetEntry("CameraSelection");
 
-  m_leftWhinchMotor.SetInverted(true);
-
   SmartDashboard::PutNumber("Min Belt Percent", 0.5);
   SmartDashboard::PutNumber("Min Intake Percent", 0.5);
   SmartDashboard::PutNumber("Min Indexer Percent", 0.5);
@@ -197,10 +198,27 @@ void Robot::RobotInit() {
   SmartDashboard::PutNumber("Flywheel Tarmac RPM", 5742 * flywheelGearRatio * 0.8);
   SmartDashboard::PutNumber("Flywheel Fender RPM", 5742 * flywheelGearRatio * 0.6);
   SmartDashboard::PutNumber("Whinch Percent", 0.5);
-  SmartDashboard::PutNumber("Auton Choice", 0);
+  SmartDashboard::PutNumber("Auton Choice", 2);
+
+  sol_frontIntakeSolenoid.Set(frc::DoubleSolenoid::Value::kReverse);
 }
 
 void Robot::RobotPeriodic() {
+  if (spinningTo){
+    if (m_hoodEncoder.GetPosition() < targetHoodRotations*1.05){
+      m_hoodMotor.Set(0.5);
+    }
+    else if (m_hoodEncoder.GetPosition() > targetHoodRotations*0.95){
+      m_hoodMotor.Set(-0.5);
+    }
+    else{
+      spinningTo = false;
+      m_hoodMotor.Disable();
+    }
+  }
+  else if(!spinningTo){
+    m_hoodMotor.Disable();
+  }
 }
 
 void Robot::AutonomousInit() {
@@ -212,7 +230,7 @@ void Robot::AutonomousInit() {
   m_rightLeadMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
   m_rightFollowMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
   m_leftFollowMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
-  autonChoice = SmartDashboard::GetNumber("Auton Choice", 0);
+  autonChoice = SmartDashboard::GetNumber("Auton Choice", 2);
 }
 
 void Robot::AutonomousPeriodic() {
@@ -418,7 +436,7 @@ void Robot::AutonomousPeriodic() {
         break;
       case 2:
         m_drive.ArcadeDrive(0, 0.5);
-        if (_gyro.GetFusedHeading() >= 22){
+        if (_gyro.GetFusedHeading() >= 37){
           autonState += 1;
           m_leftEncoder.SetPosition(0);
           m_rightEncoder.SetPosition(0);
@@ -476,31 +494,15 @@ void Robot::AutonomousPeriodic() {
   else if (autonChoice == 2){
     switch (autonState){
       case 0:
+        spinningTo = true;
+        targetHoodRotations = -180;
         sol_frontIntakeSolenoid.Set(DoubleSolenoid::Value::kForward);
         m_intakeBackMotor.Set(-0.90);
         m_intakeFrontMotor.Set(-0.90);
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.6));
         m_drive.ArcadeDrive(0.5, 0);
         SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
         if (m_leftEncoder.GetPosition() >= ((100/(6*M_PI))*8.68)){
-          autonState += 1;
-          m_leftEncoder.SetPosition(0);
-          m_rightEncoder.SetPosition(0);
-          m_leftLeadMotor.Disable();
-          m_rightLeadMotor.Disable();
-          _gyro.SetFusedHeading(0);
-          m_lowerTowerMotor.Set(0.85);
-          Wait(units::time::second_t(0.25));
-          m_lowerTowerMotor.Set(0);
-          Wait(units::time::second_t(0.5));
-        }
-        break;
-      case 1:
-        m_indexerMotor.Set(0.2);
-        sol_frontIntakeSolenoid.Set(DoubleSolenoid::Value::kReverse);
-        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.55));
-        m_drive.ArcadeDrive(-0.5, 0);
-        SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
-        if (m_leftEncoder.GetPosition() <= ((-80/(6*M_PI))*8.68)){
           autonState += 1;
           m_leftEncoder.SetPosition(0);
           m_rightEncoder.SetPosition(0);
@@ -530,16 +532,12 @@ void Robot::AutonomousPeriodic() {
         m_hoodEncoder.SetPosition(0);
         _gyro.SetFusedHeading(0);
         break;
-      case 3:
-        m_drive.ArcadeDrive(0.5, 0);
-        SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
-        if (m_leftEncoder.GetPosition() >= ((150/(6*M_PI))*8.68)){
+      case 4:
+        m_hoodMotor.Set(0.75);
+        if (hoodLimit.Get()){
+          m_hoodMotor.Set(0);
+          m_hoodEncoder.SetPosition(0);
           autonState += 1;
-          m_leftEncoder.SetPosition(0);
-          m_rightEncoder.SetPosition(0);
-          m_leftLeadMotor.Disable();
-          m_rightLeadMotor.Disable();
-          _gyro.SetFusedHeading(0);
         }
         break;
     }
@@ -582,6 +580,7 @@ void Robot::TeleopInit() {
   m_rightLeadMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
   m_leftFollowMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
   m_rightFollowMotor.SetIdleMode(CANSparkMax::IdleMode::kCoast);
+  m_indexerMotor.SetIdleMode(CANSparkMax::IdleMode::kBrake);
   m_hoodEncoder.SetPosition(0);
 }
 
@@ -591,9 +590,11 @@ void Robot::TeleopPeriodic() {
   /*
   */
   if (cont_Partner->GetPOV() == 90){
+    spinningTo = false;
     m_hoodMotor.Set(-0.5);
   }
   else if (cont_Partner->GetPOV() == 270){
+    spinningTo = false;
     if (hoodLimit.Get()){
       m_hoodMotor.Set(0);
       m_hoodEncoder.SetPosition(0);
@@ -602,9 +603,7 @@ void Robot::TeleopPeriodic() {
       m_hoodMotor.Set(0.5);
     }
   }
-  else if(!spinningTo){
-    m_hoodMotor.Disable();
-  }
+  
 
   /*
    .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------. 
@@ -626,13 +625,11 @@ void Robot::TeleopPeriodic() {
     sol_climber.Set(frc::DoubleSolenoid::Value::kReverse);
   }
 
-  if (cont_Driver->GetPOV() == 0){
-    m_leftWhinchMotor.Set(0.5);
-    m_rightWhinchMotor.Set(0.5);
+  if (cont_Driver->GetPOV() == 180){
+    m_leftWhinchMotor.Set(0.8);
   }
-  else if (cont_Driver->GetPOV() == 180){
-    m_leftWhinchMotor.Set(-0.5);
-    m_rightWhinchMotor.Set(-0.5);
+  else if (cont_Driver->GetPOV() == 0 && cont_Driver->IsConnected()){
+    m_leftWhinchMotor.Set(-0.8);
   }
   else {
     m_leftWhinchMotor.Disable();
@@ -652,14 +649,30 @@ void Robot::TeleopPeriodic() {
   | '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |
    '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------' 
   */
-  if (cont_Partner->GetR2Button()){
-    m_indexerMotor.Set(-0.75);
+  if (cont_Partner->GetR2ButtonPressed()){
+    indexerCounter = 0;
+  }
+  else if (cont_Partner->GetR2Button()){
+    indexerCounter += 1;
+    if (indexerCounter < 8){
+      m_indexerMotor.Set(-0.75);
+      //m_lowerTowerMotor.Set(0.75);
+      feedspeed = 0.75;
+    }
+    else{
+      m_indexerMotor.Disable();
+      feedspeed = 0;
+    }
+  }
+  else if (cont_Partner->GetR2ButtonReleased()){
+    feedspeed = 0;
+    m_indexerMotor.Disable();
   }
   else if (cont_Partner->GetL2Button()){
     m_indexerMotor.Set(0.75);
   }
   else {
-    m_indexerMotor.Set(0);
+    m_indexerMotor.Disable();
   }
 
   /*
@@ -682,7 +695,7 @@ void Robot::TeleopPeriodic() {
     m_lowerTowerMotor.Set(-0.75);
   }
   else {
-    m_lowerTowerMotor.Set(0);
+    m_lowerTowerMotor.Set(feedspeed);
   }
 
   /*
@@ -698,6 +711,12 @@ void Robot::TeleopPeriodic() {
   | '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |
    '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'
   */
+  if (cont_Driver->GetR2ButtonPressed()){
+    sol_frontIntakeSolenoid.Set(frc::DoubleSolenoid::Value::kForward);
+  }
+  else if (cont_Driver->GetR2ButtonReleased()){
+    sol_frontIntakeSolenoid.Set(frc::DoubleSolenoid::Value::kReverse);
+  }
   if (cont_Driver->GetR2Button()){
     m_intakeFrontMotor.Set(-0.75);
     m_intakeBackMotor.Set(-0.75);
@@ -707,6 +726,10 @@ void Robot::TeleopPeriodic() {
     m_intakeBackMotor.Set(0.75);
     m_intakeFrontMotor.Set(0.75);
     m_lowerTowerMotor.Set(-0.75);
+  }
+  else if (cont_Driver->GetTriangleButton()){
+    m_intakeBackMotor.Set(-0.75);
+    m_intakeFrontMotor.Set(-0.75);
   }
   else {
     m_intakeBackMotor.Set(-0.2);
@@ -735,67 +758,27 @@ void Robot::TeleopPeriodic() {
   */
   if (cont_Partner->GetTriangleButtonPressed()){
     flywheelTargetPCT = 0.57;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
-  }
-  else if (cont_Partner->GetTriangleButton()){
+    targetHoodRotations = -5;
     spinningTo = true;
-    if (!hoodLimit.Get()){
-      m_hoodMotor.Set(0.5);
-    }
-  }
-  else if (cont_Partner->GetTriangleButtonReleased()){
-    spinningTo = false;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
   }
   else if (cont_Partner->GetSquareButtonPressed()){
     flywheelTargetPCT = 0.35;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
-  }
-  else if (cont_Partner->GetSquareButton()){
+    targetHoodRotations = -5;
     spinningTo = true;
-    if (!hoodLimit.Get()){
-      m_hoodMotor.Set(0.5);
-    }
-  }
-  else if (cont_Partner->GetSquareButtonReleased()){
-    spinningTo = false;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
   }
   else if (cont_Partner->GetCircleButtonPressed()){
     flywheelTargetPCT = 0.60;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
-  }
-  else if (cont_Partner->GetCircleButton()){
+    targetHoodRotations = -180;
     spinningTo = true;
-    if (m_hoodEncoder.GetPosition() > -210*0.95){
-      m_hoodMotor.Set(-0.5);
-    }
-    else if(m_hoodEncoder.GetPosition() < -210*1.05){
-      m_hoodMotor.Set(0.5);
-    }
-    else{
-      m_hoodMotor.Set(0);
-    }
-  }
-  else if (cont_Partner->GetCircleButtonReleased()){
-    spinningTo = false;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
   }
   else if (cont_Partner->GetCrossButtonPressed()){
     flywheelTargetPCT = 0.85;
-    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
-  }
-  else if (cont_Partner->GetCrossButton()){
+    targetHoodRotations = -180;
     spinningTo = true;
-    if (m_hoodEncoder.GetPosition() > -210*0.95){
-      m_hoodMotor.Set(-0.5);
-    }
-    else if(m_hoodEncoder.GetPosition() < -210*1.05){
-      m_hoodMotor.Set(0.5);
-    }
-    else{
-      m_hoodMotor.Set(0);
-    }
-  }
-  else if (cont_Partner->GetCrossButtonReleased()){
-    spinningTo = false;
+    m_flywheelMotor.Set(motorcontrol::ControlMode::Velocity, flywheelPcttoRPM(flywheelTargetPCT));
   }
   else if (cont_Partner->GetPSButtonPressed()){
     flywheelTargetPCT = 0;
@@ -846,16 +829,17 @@ void Robot::TeleopPeriodic() {
   }
 
   if (cont_Driver->GetTouchpad()){
+    double kp = -0.02;
     double tx = nt::NetworkTableInstance::GetDefault().GetTable("limelight")->GetNumber("tx", 0.0);
-    float kpx = -0.05;
-    double steeringAdj = 0;
-    if (tx < 7.5 && tx > -7.5){
-      steeringAdj = kpx * tx;
+    if (tx > 2.5){
+      m_drive.ArcadeDrive(joy_lStick_Y, kp*tx);
     }
-    else if (tx < 2.5 && tx > -2.5){
-      steeringAdj = kpx * tx;
+    else if (tx < -2.5){
+      m_drive.ArcadeDrive(joy_lStick_Y, kp*tx);
     }
-    m_drive.ArcadeDrive(joy_lStick_Y, steeringAdj);
+    else{
+      m_drive.ArcadeDrive(joy_lStick_Y, 0);
+    }
   }
   else{
     m_drive.ArcadeDrive(joy_lStick_Y*0.8, -joy_rStick_X*0.8);

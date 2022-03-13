@@ -204,21 +204,7 @@ void Robot::RobotInit() {
 }
 
 void Robot::RobotPeriodic() {
-  if (spinningTo){
-    if (m_hoodEncoder.GetPosition() < targetHoodRotations*1.05){
-      m_hoodMotor.Set(0.5);
-    }
-    else if (m_hoodEncoder.GetPosition() > targetHoodRotations*0.95){
-      m_hoodMotor.Set(-0.5);
-    }
-    else{
-      spinningTo = false;
-      m_hoodMotor.Disable();
-    }
-  }
-  else if(!spinningTo){
-    m_hoodMotor.Disable();
-  }
+  
 }
 
 void Robot::AutonomousInit() {
@@ -494,13 +480,12 @@ void Robot::AutonomousPeriodic() {
   else if (autonChoice == 2){
     switch (autonState){
       case 0:
-        spinningTo = true;
-        targetHoodRotations = -180;
         sol_frontIntakeSolenoid.Set(DoubleSolenoid::Value::kForward);
         m_intakeBackMotor.Set(-0.90);
         m_intakeFrontMotor.Set(-0.90);
-        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.6));
+        m_flywheelMotor.Set(ControlMode::Velocity, flywheelPcttoRPM(0.62));
         m_drive.ArcadeDrive(0.5, 0);
+        SmartDashboard::PutNumber("Auton State", autonState);
         SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
         if (m_leftEncoder.GetPosition() >= ((100/(6*M_PI))*8.68)){
           autonState += 1;
@@ -515,7 +500,27 @@ void Robot::AutonomousPeriodic() {
           Wait(units::time::second_t(0.5));
         }
         break;
+      case 1:
+        m_hoodMotor.Set(-0.5);
+        if(m_hoodEncoder.GetPosition() < -180*0.95){
+          m_hoodMotor.Set(0);
+          autonState += 1;
+        }
+        break;
       case 2:
+        SmartDashboard::PutNumber("Auton State", autonState);
+        m_drive.ArcadeDrive(-0.5, 0);
+        SmartDashboard::PutNumber("Encoder", m_leftEncoder.GetPosition());
+        if (m_leftEncoder.GetPosition() <= ((-60/(6*M_PI))*8.68)){
+          autonState += 1;
+          m_leftEncoder.SetPosition(0);
+          m_rightEncoder.SetPosition(0);
+          m_leftLeadMotor.Disable();
+          m_rightLeadMotor.Disable();
+          _gyro.SetFusedHeading(0);
+        }
+        break;
+      case 3:
         Wait(units::time::second_t(0.5));
         m_indexerMotor.Set(-0.85);
         Wait(units::time::second_t(2.0));
@@ -602,6 +607,21 @@ void Robot::TeleopPeriodic() {
     else{
       m_hoodMotor.Set(0.5);
     }
+  }
+  else if (spinningTo){
+    if (m_hoodEncoder.GetPosition() < targetHoodRotations*1.05){
+      m_hoodMotor.Set(0.5);
+    }
+    else if (m_hoodEncoder.GetPosition() > targetHoodRotations*0.95){
+      m_hoodMotor.Set(-0.5);
+    }
+    else{
+      spinningTo = false;
+      m_hoodMotor.Disable();
+    }
+  }
+  else if(!spinningTo){
+    m_hoodMotor.Disable();
   }
   
 
